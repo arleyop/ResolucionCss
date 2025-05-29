@@ -1,22 +1,135 @@
-X [ERROR] Can't find stylesheet to import.
-   ╷
-13 │ @use '~@angular/material' as mat;
-   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   ╵
-  src\custom-theme.scss 13:1  root stylesheet [plugin angular-sass]
-
-    angular:styles/global:styles:1:8:
-      1 │ @import 'src/custom-theme.scss';
-        ╵         ~~~~~~~~~~~~~~~~~~~~~~~
+from collections import defaultdict, deque
 
 
-X [ERROR] Can't find stylesheet to import.
-  ╷
-2 │ @use '~@angular/material' as mat;
-  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  ╵
-  src\styles.scss 2:1  root stylesheet [plugin angular-sass]       
+class GrupoManager:
+    def __init__(self):
+        self.control_graph = defaultdict(set)
+        self.dep_unidireccional = []  # (origen, destino)
+        self.dep_mutua = []           # (origen, destino)
+        self.grupos = {}              # nombre_grupo: set(nodos)
+        self.entidad_grupo = {}       # entidad: nombre_grupo
 
-    angular:styles/global:styles:2:8:
-      2 │ @import 'src/styles.scss';
-        ╵         ~~~~~~~~~~~~~~~~~
+    def agregar_ficha(self, origen, criterio, destino):
+        if criterio == "controla":
+            self.control_graph[origen].add(destino)
+        elif criterio == "dependencia unidireccional":
+            self.dep_unidireccional.append((origen, destino))
+        elif criterio == "dependencia mutua":
+            self.dep_mutua.append((origen, destino))
+        else:
+            print(f"Criterio desconocido: {criterio}")
+
+    def _dfs_control(self, start):
+        visitado = set()
+        stack = [start]
+        while stack:
+            actual = stack.pop()
+            if actual not in visitado:
+                visitado.add(actual)
+                stack.extend(self.control_graph[actual])
+        return visitado
+
+    def construir_grupos(self):
+        self.grupos.clear()
+        self.entidad_grupo.clear()
+        grupo_id = 1
+
+        for nodo in list(self.control_graph):
+            if nodo not in self.entidad_grupo:
+                miembros = self._dfs_control(nodo)
+                nombre = f"Grupo_{grupo_id}"
+                self.grupos[nombre] = miembros
+                for m in miembros:
+                    self.entidad_grupo[m] = nombre
+                grupo_id += 1
+
+
+
+        # Paso 2: dependencias unidireccionales
+        for dependiente, fuente in self.dep_unidireccional:
+            if fuente in self.entidad_grupo:
+                grupo_fuente = self.entidad_grupo[fuente]
+                self.grupos[grupo_fuente].add(dependiente)
+                self.entidad_grupo[dependiente] = grupo_fuente
+
+        # Paso 3: dependencias mutuas
+        for a, b in self.dep_mutua:
+            grupo_a = self.entidad_grupo.get(a)
+            grupo_b = self.entidad_grupo.get(b)
+
+            if grupo_a and grupo_b and grupo_a != grupo_b:
+                # unir ambos grupos
+                self.grupos[grupo_a].update(self.grupos[grupo_b])
+                for entidad in self.grupos[grupo_b]:
+                    self.entidad_grupo[entidad] = grupo_a
+                del self.grupos[grupo_b]
+            elif grupo_a:
+                self.grupos[grupo_a].add(b)
+                self.entidad_grupo[b] = grupo_a
+            elif grupo_b:
+                self.grupos[grupo_b].add(a)
+                self.entidad_grupo[a] = grupo_b
+
+    def mostrar_grupos(self):
+        print("\n📦 Estado actual de los grupos:")
+        for nombre, miembros in self.grupos.items():
+            print(f"{nombre}: {sorted(miembros)}")
+
+    def mostrar_grupos_de(self, entidad):
+        """
+        Muestra todos los grupos donde aparece la entidad,
+        junto con sus miembros. Útil si hay duplicidad accidental.
+        """
+        encontrados = []
+        for nombre, miembros in self.grupos.items():
+            if entidad in miembros:
+                encontrados.append((nombre, miembros))
+
+        if encontrados:
+            print(f"\n🔍 La entidad '{entidad}' aparece en {len(encontrados)} grupo(s):")
+            for nombre, miembros in encontrados:
+                print(f"{nombre}: {sorted(miembros)}")
+        else:
+            print(f"\n⚠️ La entidad '{entidad}' no aparece en ningún grupo.")
+
+
+
+
+# 🧪 Simulación de tests
+manager = GrupoManager()
+
+# Test 1
+manager.agregar_ficha("A", "controla", "A1")
+manager.agregar_ficha("A", "controla", "A2")
+manager.agregar_ficha("C", "controla", "A")
+manager.construir_grupos()
+manager.mostrar_grupos()
+
+# Test 2
+manager.agregar_ficha("B", "controla", "B1")
+manager.agregar_ficha("B1", "dependencia unidireccional", "A2")
+manager.construir_grupos()
+manager.mostrar_grupos()
+
+# Test 3
+manager.agregar_ficha("B1", "controla", "B2")
+manager.agregar_ficha("B1", "controla", "B3")
+manager.construir_grupos()
+manager.mostrar_grupos()
+
+# Test 4
+manager.agregar_ficha("A2", "dependencia mutua", "B1")
+manager.construir_grupos()
+manager.mostrar_grupos()
+
+# Test 5
+manager.agregar_ficha("C", "controla", "C1")
+manager.agregar_ficha("C1", "controla", "C2")
+manager.construir_grupos()
+manager.mostrar_grupos()
+
+
+
+# 🎯 Ver a qué grupo pertenece A2
+manager.mostrar_grupos_de("A2")
+
