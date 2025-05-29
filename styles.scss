@@ -1,0 +1,115 @@
+/* You can add global styles to this file, and also import other style files */
+@use '~@angular/material' as mat;
+@import "./custom-theme.scss";
+
+/* Estilo global para asegurar que el html, body y el elemento raíz de la aplicación ocupen el 100% del alto */
+html,
+body,
+app-root {
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilo global para asegurar que todos los componentes dentro del router outlet ocupen el 100% del alto */
+router-outlet + * {
+  height: 100vh;
+}
+
+/* Sobrescribir el max-width de los contenedores de Bootstrap */
+.container,
+.container-sm,
+.container-md,
+.container-lg,
+.container-xl {
+  max-width: 100% !important;
+}
+
+body {
+  margin: 0;
+  //background-color: mat.get-color-from-palette($GEMotor-background, 'main');
+}
+
+h1 {
+  &:after {
+    content: "";
+    display: block;
+    position: static;
+    width: 40px;
+    height: 2px;
+    background-color: mat.get-color-from-palette($GEMotor-primary, "main");
+    margin-top: 0.25em;
+  }
+}
+
+button.mdc-button {
+  border-radius: 4em !important;
+  padding-left: 2em;
+  padding-right: 2em;
+}
+
+
+button.mdc-button,
+button.mat-mdc-button-base {
+  .mat-mdc-progress-spinner {
+    --mdc-circular-progress-active-indicator-color: white;
+  }
+  svg {
+    // allign the icon with the text
+    line-height: inherit;
+    vertical-align: top;
+  }
+}
+
+button.mat-mdc-button:not(:disabled) {
+  background-color: mat.get-color-from-palette($GEMotor-primary, 'main') !important;
+  color: white !important;  
+}
+
+button.mat-mdc-button:disabled {
+  background-color: white !important;
+  color: lightgray !important;  
+  border: 1.5px solid lightgray !important;
+}
+
+
+button.mdc-button--unelevated {
+  color: white !important;  
+  svg path {
+    fill: white !important;
+  }
+}
+
+button.mdc-button.mat-mdc-outlined-button {
+  border-color: var(--mdc-outlined-button-label-text-color, inherit);
+  svg path {
+    fill: var(--mdc-outlined-button-label-text-color, inherit) !important;
+  }
+}
+
+.mdc-line-ripple {
+  &::before {
+    border-bottom-color: #137e84 !important;
+    border-bottom-width: 2px !important;
+  }
+}
+
+mat-form-field {
+  .mdc-text-field {
+    background-color: white !important;
+  }
+  mat-icon {
+    svg path {
+      fill: #000;
+    }
+  }
+}
+
+app-shared-table {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+a {
+  color: mat.get-color-from-palette($GEMotor-primary, 'main') !important;
+}

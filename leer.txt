@@ -1,0 +1,22 @@
+X [ERROR] Can't find stylesheet to import.
+   ╷
+13 │ @use '~@angular/material' as mat;
+   │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   ╵
+  src\custom-theme.scss 13:1  root stylesheet [plugin angular-sass]
+
+    angular:styles/global:styles:1:8:
+      1 │ @import 'src/custom-theme.scss';
+        ╵         ~~~~~~~~~~~~~~~~~~~~~~~
+
+
+X [ERROR] Can't find stylesheet to import.
+  ╷
+2 │ @use '~@angular/material' as mat;
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  ╵
+  src\styles.scss 2:1  root stylesheet [plugin angular-sass]       
+
+    angular:styles/global:styles:2:8:
+      2 │ @import 'src/styles.scss';
+        ╵         ~~~~~~~~~~~~~~~~~
