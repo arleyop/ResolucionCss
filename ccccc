@@ -1,0 +1,49 @@
+
+
+describe("AppComponent", () => {
+  let component: AppComponent;
+  let fixture: ComponentFixture<AppComponent>;
+  let iconRegistry: MatIconRegistry;
+  let sanitizer: DomSanitizer;
+  let iconService: IconService;
+
+  beforeEach(waitForAsync(() => {
+    TestBed.configureTestingModule({
+      declarations: [AppComponent],
+      providers: [
+        providerItpClient(),
+        providerItpClientTesting(),
+        IconService,
+      ],
+      imports: [
+        MatIconModule,
+        MatDataBuffer,
+        MatNativeDateModule,
+        MorphInInstanceModule,
+      ]
+    }).compileComponents();
+  }));
+
+  beforeEach(() => {
+    iconRegistry = TestBed.inject(MatIconRegistry);
+    sanitizer = TestBed.inject(DomSanitizer);
+    
+    // Configurar iconos
+    const commonIcon = ["CLOSE", "search", "menu", "add", "delete"];
+    commonIcon.forEach(iconName => {
+      iconRegistry.addSvgIconLiteral(iconName, sanitizer.bypassSecurityTrustHtml('<svg></svg>'));
+    });
+
+    fixture = TestBed.createComponent(AppComponent);
+    component = fixture.componentInstance;
+    iconService = TestBed.inject(IconService);
+    
+    fixture.detectChanges();
+  });
+
+  it("should create", () => {
+    expect(component).toBeTruthy();
+  });
+
+  // Agrega más pruebas aquí según sea necesario
+});
