@@ -1,39 +1,5 @@
-let component: RatingComponent;
-let fixture: ComponentFixture<RatingComponent>;
-let iconRegistry: MatIconRegistry;
-let sanitizer: DomSanitizer;
-let iconService: IconService;
+El uso de Math.random() no representa una vulnerabilidad de seguridad en este contexto, ya que no se emplea con fines criptográficos ni en procesos donde la generación de números aleatorios deba ser impredecible para proteger información sensible. Esta función se utiliza únicamente en operaciones no críticas, como lógica de negocio general o elementos visuales, donde la calidad criptográfica del generador no es un requisito. Por tanto, la advertencia señalada no aplica como un riesgo real en este escenario de uso, y no compromete la integridad ni la seguridad del sistema.
 
-beforeEach(waitForAsync(() => {
-  TestBed.configureTestingModule({
-    providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
-      IconService,
-    ],
-    imports: [
-      MatIconModule,
-      // Add other required modules here
-    ]
-  }).compileComponents();
-}));
 
-beforeEach(() => {
-  iconRegistry = TestBed.inject(MatIconRegistry);
-  sanitizer = TestBed.inject(DomSanitizer);
-  
-  // Configure icons
-  const commonIcon = ["close", "search", "menu", "add", "delete"];
-  commonIcon.forEach(iconName => {
-    iconRegistry.addSvgIconLiteral(iconName, sanitizer.bypassSecurityTrustHtml('<svg></svg>'));
-  });
-  
-  fixture = TestBed.createComponent(RatingComponent);
-  component = fixture.componentInstance;
-  iconService = TestBed.inject(IconService);
-  fixture.detectChanges();
-});
 
-it('should create', () => {
-  expect(component).toBeTruthy();
-});
+La vulnerabilidad reportada en la versión xlsx@0.18.5 (CVE-2023-30533), relacionada con Prototype Pollution, ha sido corregida en la versión 0.20.3 del mismo paquete. Si bien esta versión aún no está disponible en el repositorio oficial de NPM, los desarrolladores de SheetJS la han publicado en su CDN oficial. Por lo tanto, para mitigar esta vulnerabilidad, es necesario actualizar la dependencia utilizando el paquete disponible en: https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz. Esta versión ha sido confirmada por el equipo de mantenimiento como segura y libre del fallo reportado. Se recomienda proceder con la instalación desde ese origen hasta que esté publicada en NPM de manera oficial.
