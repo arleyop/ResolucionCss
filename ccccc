@@ -1,16 +1,69 @@
-Producción (Recomendado)
-CPU: 4-8 núcleos (x64).
+Fundamento:
 
-RAM: 8-16 GB.
+Payara 6 utiliza un modelo de thread pools para manejar solicitudes concurrentes (HTTP, EJB, JMS). Cada núcleo puede gestionar ~50-100 hilos simultáneos.
 
-Asignar a JVM: -Xmx8G -Xms4G (75% de la RAM para Payara).
+4 núcleos es el mínimo para producción:
 
-Almacenamiento: 100 GB SSD (más espacio si maneja archivos subidos).
+2 núcleos para el SO y procesos de fondo.
 
-Partición recomendada:
+2 núcleos dedicados a Payara (pools de conexiones BD, procesamiento de solicitudes).
 
-C:\ (SO + Payara): 60 GB.
+8 núcleos recomendados si:
 
-D:\uploads (archivos): 40 GB+.
+Hay procesos batch (cargas de archivos).
 
-Red: 1 Gbps.
+Tráfico alto (>100 usuarios concurrentes).
+
+Referencia: Payara Performance Tuning Guide (Sección "Thread Pools and CPU Scaling").
+
+2. RAM: 8-16 GB
+Desglose de uso:
+
+Componente	Memoria Asignada
+JVM Heap (-Xmx8G)	8 GB (back-end, cachés, sesiones)
+Metaspace	512 MB (clases cargadas)
+Memoria nativa	1-2 GB (NIO, compresión)
+SO Windows Server	2-4 GB (kernel, servicios)
+Margen de seguridad	1-2 GB
+Por qué 8 GB mínimo:
+
+Payara 6 + JVM consumen ~6 GB en carga media (monitoreo de Payara Healthcheck).
+
+Windows Server requiere 2 GB adicionales (no compartibles con JVM).
+
+Escala a 16 GB si:
+
+Hay cargas de archivos grandes (>100 MB).
+
+Uso de cachés en memoria (Hazelcast, Infinispan).
+
+Referencia: Payara Memory Management.
+
+3. Almacenamiento: 100 GB SSD con particiones
+C:\ (60 GB):
+
+Windows Server 2022: 32 GB (instalación base).
+
+Payara 6 + JDK: 5 GB.
+
+Logs: 15 GB (rotación mensual).
+
+Espacio libre (20%): 8 GB (para actualizaciones/parches).
+
+D:\uploads (40 GB+):
+
+Cálculo para cargas de archivos:
+
+text
+[Archivos/mes] × [Tamaño promedio] × [Periodo de retención]  
+Ej: 500 archivos × 50 MB × 6 meses = 150 GB → **Partición de 200 GB**  
+SSD obligatorio: Para alta IOPS (operaciones de escritura de archivos).
+
+4. Red: 1 Gbps
+Cálculo de ancho de banda:
+
+Solicitudes HTTP: 1000 usuarios × 50 KB/request = 50 MB/s (400 Mbps).
+
+Cargas de archivos: 10 archivos × 100 MB simultáneos = 1 GB → 800 Mbps.
+
+Margen: 1 Gbps evita cuellos de botella.
