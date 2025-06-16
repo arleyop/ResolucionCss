@@ -1,0 +1,94 @@
+package com.santander.bnc.bsn021.bncbsn021gemotorbackend.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+
+
+import javax.sql.DataSource;
+
+import java.util.Properties;
+
+import org.springframework.context.annotation.FilterType;
+
+@Configuration
+@EnableTransactionManagement
+@EnableJpaRepositories(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.motor", 
+		excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.santander\\.bnc\\.bsn021\\.bncbsn021gemotorbackend\\.repository\\.golden\\..*"), // FIX
+        entityManagerFactoryRef = "gemotorEntityManagerFactory", 
+        transactionManagerRef = "gemotorTransactionManager")
+
+@EntityScan(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor") // Paquete donde se encuentran las entidades JPA
+public class GemotorConfig {
+
+    @Value("${env.database.gemotor.hibernate.default_schema}")
+    private String defaultSchema;
+
+    @Autowired
+    private Environment environment;
+
+    @Primary
+    @Bean(name = "gemotorDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.gemotor")
+    public DataSource gemotorDataSource() {
+        DataSource dataSource = DataSourceBuilder.create().build();
+        return dataSource;
+    }
+
+    @Primary
+    @Bean(name = "gemotorEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean gemotorEntityManagerFactory() {
+        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
+        em.setDataSource(gemotorDataSource());
+        em.setPackagesToScan("com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor");
+        em.setPersistenceUnitName("gemotorPU");
+        HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
+        em.setJpaVendorAdapter(vendorAdapter);
+        em.setJpaProperties(hibernateProperties());
+        return em;
+    }
+
+    @Primary
+    @Bean(name = "gemotorTransactionManager")
+    public PlatformTransactionManager gemotorTransactionManager(
+            @Qualifier("gemotorEntityManagerFactory") LocalContainerEntityManagerFactoryBean gemotorEntityManagerFactory) {
+        return new JpaTransactionManager(gemotorEntityManagerFactory.getObject());
+    }
+
+    private Properties hibernateProperties() {
+        Properties properties = new Properties();
+    
+        if (environment.getActiveProfiles().length > 0 && 
+            "test".equals(environment.getActiveProfiles()[0])) {
+            properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        } else {
+            properties.put("hibernate.dialect", "org.hibernate.dialect.OracleDialect");
+        }
+        properties.put("hibernate.show_sql", "true");
+        properties.put("hibernate.hbm2ddl.auto", "update");
+        properties.put("hibernate.default_schema", defaultSchema);
+        return properties;
+    }
+
+    @Bean
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+}
