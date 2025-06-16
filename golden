@@ -1,0 +1,84 @@
+package com.santander.bnc.bsn021.bncbsn021gemotorbackend.config;
+
+import java.util.Properties;
+
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+@Configuration
+@EnableTransactionManagement
+@EnableJpaRepositories(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.golden", // Paquete
+																											// para los
+																											// repositorios																						// de Golden
+		excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.santander\\.bnc\\.bsn021\\.bncbsn021gemotorbackend\\.repository\\.motor\\..*"), // FIX
+		entityManagerFactoryRef = "goldenEntityManagerFactory",
+
+		transactionManagerRef = "goldenTransactionManager")
+@EntityScan(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.golden") // Paquete para las
+																							// entidades de Golden
+public class GoldenConfig {
+
+	@Value("${env.database.golden.hibernate.default_schema}")
+	private String defaultSchema;
+
+	@Autowired
+	private Environment environment;
+
+	@Primary
+	@Bean(name = "goldenDataSource")
+	@ConfigurationProperties(prefix = "spring.datasource.golden")
+	public DataSource goldenDataSource() {
+		DataSource dataSource = DataSourceBuilder.create().build();
+		return dataSource;
+	}
+
+	@Bean(name = "goldenEntityManagerFactory")
+	public LocalContainerEntityManagerFactoryBean goldenEntityManagerFactory() {
+		LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
+		em.setDataSource(goldenDataSource());
+		em.setPackagesToScan("com.co.grandesExposiciones.modelg.golden");
+		em.setPersistenceUnitName("goldenPU");
+
+		HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
+		em.setJpaVendorAdapter(vendorAdapter);
+		em.setJpaProperties(hibernateProperties());
+
+		return em;
+	}
+
+	private Properties hibernateProperties() {
+		Properties properties = new Properties();
+
+		if (environment.getActiveProfiles().length > 0 && "test".equals(environment.getActiveProfiles()[0])) {
+			properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+		} else {
+			properties.put("hibernate.dialect", "org.hibernate.dialect.OracleDialect");
+		}
+
+		properties.put("hibernate.dialect", "org.hibernate.dialect.SQLServerDialect");
+		properties.put("hibernate.show_sql", "true");
+		properties.put("hibernate.hbm2ddl.auto", "update");
+		return properties;
+	}
+
+	@Bean
+	public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+		return new JdbcTemplate(dataSource);
+	}
+}
