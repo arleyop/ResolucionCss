@@ -1,0 +1,7 @@
+Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.support.BeanDefinitionOverrideException: Invalid bean definition with name 'jdbcTemplate' defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GemotorConfig.class]: Cannot register bean definition [Root bean: class [null]; scope=; abstract=false; lazyInit=null; autowireMode=3; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=gemotorConfig; factoryMethodName=jdbcTemplate; initMethodNames=null; destroyMethodNames=[(inferred)]; defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GemotorConfig.class]] for bean 'jdbcTemplate' since there is already [Root bean: class [null]; scope=; abstract=false; lazyInit=null; autowireMode=3; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=goldenConfig; factoryMethodName=jdbcTemplate; initMethodNames=null; destroyMethodNames=[(inferred)]; defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GoldenConfig.class]] bound.
+[2m2025-06-16T15:47:43.156-05:00[0;39m [31mERROR[0;39m [35m16684[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mo.s.b.d.LoggingFailureAnalysisReporter  [0;39m [2m:[0;39m 
+
+
+
+
+
