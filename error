@@ -1,12 +1,41 @@
-Caused by: java.lang.IllegalArgumentException: jdbcUrl is required with driverClassName.
+@Bean(name = "goldenDataSource")
+@ConfigurationProperties("spring.datasource.golden")
+public HikariDataSource goldenDataSource() {
+    return DataSourceBuilder.create()
+        .type(HikariDataSource.class)
+        .build();
+}
 
 
-org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'gemotorEntityManagerFactory' defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GemotorConfig.class]: [PersistenceUnit: gemotorPU] Unable to build Hibernate SessionFactory; nested exception is java.lang.IllegalArgumentException: jdbcUrl is required with driverClassName.
+@Primary
+@Bean(name = "gemotorDataSource")
+@ConfigurationProperties("spring.datasource.gemotor")
+public HikariDataSource gemotorDataSource() {
+    return DataSourceBuilder.create()
+        .type(HikariDataSource.class)
+        .build();
+}
 
 
-[2m2025-06-16T21:56:34.364-05:00[0;39m [31mERROR[0;39m [35m18360[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mc.z.h.HikariConfig                      [0;39m [2m:[0;39m HikariPool-1 - jdbcUrl is required with driverClassName.
-[2m2025-06-16T21:56:37.659-05:00[0;39m [31mERROR[0;39m [35m18360[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mc.z.h.HikariConfig                      [0;39m [2m:[0;39m HikariPool-1 - jdbcUrl is required with driverClassName.
 
 
-org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'gemotorEntityManagerFactory' defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GemotorConfig.class]: [PersistenceUnit: gemotorPU] Unable to build Hibernate SessionFactory; nested exception is java.lang.IllegalArgumentException: jdbcUrl is required with driverClassName.
-	
+
+spring:
+  datasource:
+    gemotor:
+      jdbc-url: jdbc:oracle:thin:@//oracle-host:1521/ORCL
+      username: gemotor_user
+      password: gemotor_password
+      driver-class-name: oracle.jdbc.OracleDriver
+      hikari:
+        connection-timeout: 30000
+        maximum-pool-size: 10
+
+    golden:
+      jdbc-url: jdbc:sqlserver://sqlserver-host:1433;databaseName=golden_db;encrypt=true;trustServerCertificate=true
+      username: golden_user
+      password: golden_password
+      driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+      hikari:
+        connection-timeout: 30000
+        maximum-pool-size: 10
