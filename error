@@ -1,38 +1,25 @@
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-
-@Configuration
-public class JwtSecurityConfig {
-
-    // Debe coincidir con el valor en application.yml
-    @Value("${jwt.secret-key}")
-    private String jwtSecret;
-
     @Bean
-    public JwtEncoder jwtEncoder() {
-        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        JWKSource<SecurityContext> immutableSecret = new ImmutableSecret<>(key);
-        return new NimbusJwtEncoder(immutableSecret);
+    public KeyPair keyPair() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            return keyPairGenerator.generateKeyPair();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Error al generar el par de claves RSA", ex);
+        }
     }
 
     @Bean
-    public JwtDecoder jwtDecoder() {
-        SecretKey originalKey = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(originalKey).build();
+    public JwtEncoder jwtEncoder(KeyPair keyPair) {
+        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(
+            new JWKSet(new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                .privateKey((RSAPrivateKey) keyPair.getPrivate())
+                .build())
+        );
+        return new NimbusJwtEncoder(jwkSource);
     }
-}
 
-
-jwt:
-  secret-key: "5A7134743777217A25432A462D4A614E"  # Hexadecimal (32 caracteres)
+    @Bean
+    public JwtDecoder jwtDecoder(KeyPair keyPair) {
+        return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
+    }
