@@ -1,20 +1,16 @@
-[2m2025-06-16T22:19:57.185-05:00[0;39m [31mERROR[0;39m [35m9876[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mc.z.h.HikariConfig                      [0;39m [2m:[0;39m Failed to load driver class com.microsoft.sqlserver.jdbc.SQLServerDriver from HikariConfig class classloader jdk.internal.loader.ClassLoaders$AppClassLoader@2f333739
-[2m2025-06-16T22:19:57.188-05:00[0;39m [33m WARN[0;39m [35m9876[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mConfigServletWebServerApplicationContext[0;39m [2m:[0;39m Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'goldenEntityManagerFactory' defined in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GoldenConfig.class]: Failed to instantiate [org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean]: Factory method 'goldenEntityManagerFactory' threw exception with message: Error creating bean with name 'goldenDataSource': Could not bind properties to 'HikariDataSource' : prefix=spring.datasource.golden, ignoreInvalidFields=false, ignoreUnknownFields=true
-[2m2025-06-16T22:20:00.824-05:00[0;39m [31mERROR[0;39m [35m9876[0;39m [2m---[0;39m [2m[bnc-bsn021-gemotorbackend] [           main][0;39m [2m[                                                 ] [0;39m[36mo.s.b.d.LoggingFailureAnalysisReporter  [0;39m [2m:[0;39m 
-
-***************************
-APPLICATION FAILED TO START
-***************************
-
-Description:
-
-Failed to bind properties under 'spring.datasource.golden' to com.zaxxer.hikari.HikariDataSource:
-
-    Property: spring.datasource.golden.driver-class-name
-    Value: "com.microsoft.sqlserver.jdbc.SQLServerDriver"
-    Origin: class path resource [config/application.yml] - 54:26
-    Reason: java.lang.RuntimeException: Failed to load driver class com.microsoft.sqlserver.jdbc.SQLServerDriver in either of HikariConfig class loader or Thread context classloader
-
-Action:
-
-Update your application's configuration
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <configuration>
+                <requiresUnpack>
+                    <dependency>
+                        <groupId>com.microsoft.sqlserver</groupId>
+                        <artifactId>mssql-jdbc</artifactId>
+                    </dependency>
+                </requiresUnpack>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
