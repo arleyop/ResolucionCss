@@ -1,2 +1,19 @@
-Esto es una variable de entorno
-Caused by: java.lang.IllegalArgumentException: Could not resolve placeholder 'RUTA_FICHA_TECNICA' in value "${RUTA_FICHA_TECNICA}"
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Field jdbcTemplate in com.santander.bnc.bsn021.bncbsn021gemotorbackend.service.impl.MarcacionClienteOperacionServiceImpl required a single bean, but 2 were found:
+	- gemotorJdbcTemplate: defined by method 'gemotorJdbcTemplate' in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GemotorConfig.class]
+	- goldenJdbcTemplate: defined by method 'goldenJdbcTemplate' in class path resource [com/santander/bnc/bsn021/bncbsn021gemotorbackend/config/GoldenConfig.class]
+
+This may be due to missing parameter name information
+
+Action:
+
+Consider marking one of the beans as @Primary, updating the consumer to accept multiple beans, or using @Qualifier to identify the bean that should be consumed
+
+Ensure that your compiler is configured to use the '-parameters' flag.
+You may need to update both your build tool settings as well as your IDE.
+(See https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x#parameter-name-retention)
