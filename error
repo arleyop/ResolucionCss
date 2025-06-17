@@ -1,15 +1,34 @@
-***************************
-APPLICATION FAILED TO START
-***************************
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 
-Description:
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
-Field encoder in com.santander.bnc.bsn021.bncbsn021gemotorbackend.controller.TokenController required a bean of type 'org.springframework.security.oauth2.jwt.JwtEncoder' that could not be found.
+@Configuration
+public class JwtSecurityConfig {
 
-The injection point has the following annotations:
-	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+    // Debe coincidir con el valor en application.yml
+    @Value("${jwt.secret-key}")
+    private String jwtSecret;
 
+    @Bean
+    public JwtEncoder jwtEncoder() {
+        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        JWKSource<SecurityContext> immutableSecret = new ImmutableSecret<>(key);
+        return new NimbusJwtEncoder(immutableSecret);
+    }
 
-Action:
-
-Consider defining a bean of type 'org.springframework.security.oauth2.jwt.JwtEncoder' in your configuration.
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        SecretKey originalKey = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        return NimbusJwtDecoder.withSecretKey(originalKey).build();
+    }
+}
