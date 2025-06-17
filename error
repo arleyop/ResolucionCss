@@ -1,11 +1,30 @@
-Errors occurred during the build.
-Errors running builder 'Maven Project Builder' on project 'SIAR-API'.
-Could not calculate build plan: Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Could not calculate build plan: Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Errors running builder 'Maven Project Builder' on project 'SIAR-ear'.
-Could not calculate build plan: Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Could not calculate build plan: Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
-Plugin org.apache.maven.plugins:maven-resources-plugin:2.6 or one of its dependencies could not be resolved: Failed to read artifact descriptor for org.apache.maven.plugins:maven-resources-plugin:jar:2.6
+@SpringBootApplication
+public class Application implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(Application.class);
+    
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+    
+    @Override
+    public void run(String... args) {
+        checkDrivers();
+    }
+    
+    private void checkDrivers() {
+        log.info("Verificando controladores JDBC...");
+        Enumeration<Driver> drivers = DriverManager.getDrivers();
+        while (drivers.hasMoreElements()) {
+            Driver driver = drivers.nextElement();
+            log.info("Driver cargado: {}", driver.getClass().getName());
+        }
+        
+        try {
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+            log.info("Controlador SQL Server está cargado");
+        } catch (ClassNotFoundException e) {
+            log.error("Controlador SQL Server NO encontrado", e);
+        }
+    }
+}
