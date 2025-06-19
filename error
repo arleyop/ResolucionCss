@@ -1,25 +1,11 @@
-    @Bean
-    public KeyPair keyPair() {
-        try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048);
-            return keyPairGenerator.generateKeyPair();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Error al generar el par de claves RSA", ex);
-        }
-    }
+f088904c4fb01f88 f088904c4fb01f88  DarwinExceptionHandlerController - Received generic exception in the Darwin framework java.lang.ClassCastException: class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app')
+	
 
-    @Bean
-    public JwtEncoder jwtEncoder(KeyPair keyPair) {
-        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(
-            new JWKSet(new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
-                .privateKey((RSAPrivateKey) keyPair.getPrivate())
-                .build())
-        );
-        return new NimbusJwtEncoder(jwkSource);
-    }
 
-    @Bean
-    public JwtDecoder jwtDecoder(KeyPair keyPair) {
-        return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
-    }
+
+f088904c4fb01f88 f088904c4fb01f88  DarwinExceptionHandlerController - Received controlled exception in the Darwin framework  GenericDarwinException(errorName=java.lang.ClassCastException, internalCode=-1, shortMessage=class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app'), detailedMessage=class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app'), mapExtendedMessage={})
+	
+
+
+class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app')
+	
