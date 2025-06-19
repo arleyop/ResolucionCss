@@ -1,11 +1,133 @@
-f088904c4fb01f88 f088904c4fb01f88  DarwinExceptionHandlerController - Received generic exception in the Darwin framework java.lang.ClassCastException: class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app')
-	
+
+@RestController
+@RequestMapping("/api")
+public class TokenController {
+
+    @Autowired
+    JwtEncoder encoder;
+    
+    @Autowired
+    UserService service;
+    
+    @Autowired
+    ExternalAuthService authService;
+    
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    
+    
+    
+    @CrossOrigin(origins = "http://localhost:4200")
+    @PostMapping("/token")
+    public ResponseEntity<Map<String, Object>> token(@RequestParam String username, @RequestParam String password) {
+    	
+    	
+    	
+        Instant now = Instant.now();
+        long expiry = 1500L;
+        
+        UsernamePasswordAuthenticationToken auToken = new UsernamePasswordAuthenticationToken(username, password);
+        
+        Authentication authentication = authenticationManager.authenticate(auToken);
+
+        String scope = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(" "));
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("Motorg")
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(expiry))
+                .subject(username)
+                .claim("scope", scope)
+                .build();
+        
+        try {
+            //Intentar obtener el token del servicio de autenticación
+            String token = authService.requestToken(username, password);
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
+        }
+//
+        String tokenValue = this.encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+//        
+        AppUserDTO appUserDTO = service.getUsername(username);
+//        
+        if (appUserDTO.isEsActivo()) {
+        	return ResponseEntity.ok(Map.of(
+            		"nombre", username,
+                    "access_token", tokenValue,
+                    "idUser", appUserDTO.getId(),
+                    "token_type", "Bearer",
+                    "expires_in", expiry,
+                    "scope", scope
+            ));
+        }
+//        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                "error", "Usuario no está activo"
+            ));
+
+        
+    }
 
 
 
-f088904c4fb01f88 f088904c4fb01f88  DarwinExceptionHandlerController - Received controlled exception in the Darwin framework  GenericDarwinException(errorName=java.lang.ClassCastException, internalCode=-1, shortMessage=class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app'), detailedMessage=class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app'), mapExtendedMessage={})
-	
 
 
-class org.springframework.security.authentication.UsernamePasswordAuthenticationToken cannot be cast to class org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken (org.springframework.security.authentication.UsernamePasswordAuthenticationToken and org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken are in unnamed module of loader 'app')
-	
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {	
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+        	.cors(Customizer.withDefaults()) // Usa la configuración de CORS definida en CorsConfig
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/token", "/api/users/createuser","/rol","/ws-progress/**"))
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/api/token", "/api/users/createuser","/rol","/ws-progress/**").permitAll()
+                .anyRequest().authenticated()
+            );
+        return http.build();
+    }
+    
+
+	@Bean
+	public UserDetailsService userDetailsService() {
+		return new CustomUserDetailsService();
+	}
+
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+    @Bean
+    public KeyPair keyPair() {
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            return keyPairGenerator.generateKeyPair();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Error al generar el par de claves RSA", ex);
+        }
+    }
+
+    @Bean
+    public JwtEncoder jwtEncoder(KeyPair keyPair) {
+        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(
+            new JWKSet(new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                .privateKey((RSAPrivateKey) keyPair.getPrivate())
+                .build())
+        );
+        return new NimbusJwtEncoder(jwkSource);
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder(KeyPair keyPair) {
+        return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
+    }
+
+
+}
