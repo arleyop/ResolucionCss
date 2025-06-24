@@ -1,72 +1,37 @@
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {	
-	
-	@Autowired
-	private CorsConfig config;
+Mensaje principal del error:
+text
+Copiar
+Editar
+A filter chain that matches any request [...] has already been configured
+🧠 Significado:
+Spring Security no permite que más de una configuración (SecurityFilterChain) intente aplicar reglas a todas las rutas (anyRequest) al mismo tiempo. Esto provoca una colisión al crear los beans, impidiendo que la aplicación arranque.
 
-    @Bean
-    @Order(1)
-    public SecurityFilterChain personalizedSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-            // Aquí se restringen las rutas que este filtro manejará
-            .securityMatcher("/api/token", "/api/users/createuser", "/rol", "/ws-progress/**")
-            .cors(cors -> cors.configurationSource(config.corsConfigurationSource()))
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/token", "/api/users/createuser", "/rol", "/ws-progress/**"))
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/token", "/api/users/createuser", "/rol", "/ws-progress/**").permitAll()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        
-        return http.build();
-    }
+🔥 Origen del problema:
+Tu clase SecurityConfig definía un SecurityFilterChain sin restringirlo a rutas específicas, lo cual entró en conflicto con otro SecurityFilterChain generado automáticamente por Spring (probablemente desde AuthenticationServletAutoConfiguration del módulo Darwin).
 
-	@Bean
-	public UserDetailsService userDetailsService() {
-		return new CustomUserDetailsService();
-	}
+🔍 Revisión del Proyecto
+SecurityConfig contenía un bean llamado personalizedSecurityFilterChain que manejaba .anyRequest() sin restricción.
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+Otro SecurityFilterChain del sistema (darwinSecurityWebFilterChain) también estaba definido con .anyRequest(), causando conflicto.
 
-    @Bean
-    public KeyPair keyPair() {
-        try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048);
-            return keyPairGenerator.generateKeyPair();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Error al generar el par de claves RSA", ex);
-        }
-    }
+No se estaba utilizando securityMatcher(...) para delimitar rutas específicas que cada filtro debería manejar.
 
-    @Bean
-    public JwtEncoder jwtEncoder(KeyPair keyPair) {
-        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(
-            new JWKSet(new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
-                .privateKey((RSAPrivateKey) keyPair.getPrivate())
-                .build())
-        );
-        return new NimbusJwtEncoder(jwkSource);
-    }
+Spring detectó esta colisión y lanzó una excepción BeanCreationException.
 
-    @Bean
-    public JwtDecoder jwtDecoder(KeyPair keyPair) {
-        return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
-    }
-}
+🛠️ Tipo de Solución Aplicada
+✔️ Solución técnica:
+Se delimitó el ámbito de aplicación del SecurityFilterChain usando securityMatcher(...), de esta forma:
 
+java
+Copiar
+Editar
+http
+  .securityMatcher("/api/token", "/api/users/createuser", "/rol", "/ws-progress/**")
+🎯 Resultado:
+El SecurityFilterChain ahora solo aplica a las rutas necesarias.
 
+Evitamos capturar todas las rutas (anyRequest) desde múltiples filtros.
 
+La aplicación puede inicializar sin conflictos de seguridad.
 
-@Bean
-@Order(2)
-public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-        .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-
-    return http.build();
-}
+Se mantiene el orden de ejecución con @Order(1).
