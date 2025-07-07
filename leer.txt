@@ -1,12 +1,25 @@
-// Validación de rol
-Long roleId = user.getRoleId();
-if (!usuarioAutenticadoPuedeAsignarRol(roleId)) {
-    throw new SecurityException("No autorizado para asignar este rol.");
-}
-Role role = roleRepository.findById(roleId)
-    .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
-// Crear y guardar usuario
-appUser.setContrasenia(passwordEncoder.encode(user.getContrasenia()));
-appUser.setRol(role);
-userRepository.save(appUser);
+@PutMapping("/activar-desactivar-submodulo/{id}")
+public ResponseEntity<?> activarDesactivarSubmodulo(@PathVariable Long id,
+                                                    @RequestParam boolean activar) {
+    Map<String, Object> response = new HashMap<>();
+
+    try {
+        SubmoduloDTO submoduloDTO = moduloService.activarDesactivarSubmodulo(id, activar);
+
+        response.put("status", "success");
+        response.put("data", submoduloDTO); // Asegúrate que este DTO no tenga info sensible
+        return new ResponseEntity<>(response, HttpStatus.OK);
+
+    } catch (MarcacionNotFoundException ex) {
+        response.put("status", "error");
+        response.put("message", "No se encontró el submódulo solicitado.");
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
+
+    } catch (Exception e) {
+        log.error("Error en activarDesactivarSubmodulo", e); // Log interno para depuración
+        response.put("status", "error");
+        response.put("message", "Ha ocurrido un error al procesar la solicitud.");
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+}
