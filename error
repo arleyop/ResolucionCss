@@ -1,11 +1,52 @@
-Aquí tienes una propuesta de descripciones para los roles que aparecen en tu tabla, basadas en tu explicación:
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-| NOMBRE DEL ROL    | DESCRIPCIÓN DEL ROL EN LA APLICACIÓN (¿QUÉ PUEDE HACER?)                                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **adminSuper**    | Accede y gestiona todos los módulos de la aplicación: apetito, reporte, parametría, simulador, procesos, gestión y administración de usuarios.             |
-| **Administrador** | Tiene acceso total a todos los módulos excepto la gestión de usuarios. Administra funcionalidades como apetito, reporte, parametría, simulador y procesos. |
-| **Analista**      | Consulta información y genera reportes. Puede acceder a los módulos de análisis, pero sin privilegios de administración ni parametrización.                |
-| **Comercial**     | Visualiza información comercial, genera reportes específicos del área, y utiliza el simulador para proyecciones. Acceso restringido a gestión.             |
-| **Consulta**      | Solo lectura. Acceso a reportes e información general sin posibilidad de realizar modificaciones.                                                          |
+@Service
+public class ExternalAuthServiceImpl implements ExternalAuthService {
 
-¿Te gustaría que genere esto en Excel o en otro formato (PDF, Word, etc.)?
+    @Value("${env.external.token.url}")
+    private String TOKEN_URL;
+
+    @Value("${env.external.token.authorizationheader}")
+    private String AUTHORIZATION_HEADER;
+
+    public String requestToken(String username, String password) {
+        try {
+            // ✅ Codificar parámetros de forma segura
+            String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+            String encodedPassword = URLEncoder.encode(password, StandardCharsets.UTF_8);
+            String body = "grant_type=password&username=" + encodedUsername + "&password=" + encodedPassword;
+
+            // Crear conexión
+            URL url = new URL(TOKEN_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Authorization", AUTHORIZATION_HEADER);
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            connection.setDoOutput(true);
+
+            // ✅ Escribir cuerpo de forma segura
+            try (OutputStream os = connection.getOutputStream()) {
+                os.write(body.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+            }
+
+            // Leer respuesta
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8")) {
+                    scanner.useDelimiter("\\A");
+                    return scanner.hasNext() ? scanner.next() : null;
+                }
+            } else {
+                throw new RuntimeException("Error al obtener token: Código HTTP " + responseCode);
+            }
+
+        } catch (IOException e) {
+            throw new RuntimeException("Error de conexión con el servidor de autenticación", e);
+        }
+    }
+}
