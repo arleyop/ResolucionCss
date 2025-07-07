@@ -1,162 +1,20 @@
-from collections import defaultdict
-
-class GrupoManager:
-    def __init__(self):
-        self.control_graph = defaultdict(set)
-        self.dep_unidireccional = []
-        self.dep_mutua = []
-        self.grupos = {}
-        self.entidad_grupos = defaultdict(set)
-        self.grupo_counter = 1
-        self.all_nodes = set()
-
-    def agregar_ficha(self, origen, criterio, destino):
-        self.all_nodes.update([origen, destino])
-        if criterio == "CT":
-            self.control_graph[origen].add(destino)
-        elif criterio == "IE":
-            self.dep_unidireccional.append((origen, destino))
+public boolean usuarioAutenticadoPuedeAsignarRol(Long roleId) {
+    // Obtener el usuario autenticado desde el contexto de seguridad (por ejemplo, Spring Security)
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    User authenticatedUser = (User) authentication.getPrincipal();
     
-    def _get_raices_control(self):
-        todos_los_hijos = set()
-        for hijos in self.control_graph.values():
-            todos_los_hijos |= hijos
-        return self.all_nodes - todos_los_hijos
+    // Asumimos que el rol del usuario autenticado está en 'authenticatedUser'
+    String authenticatedRole = authenticatedUser.getRole(); // O el método adecuado para obtener el rol
 
-    def _dfs_control(self, start):
-        visitados = set()
-        stack = [start]
-        while stack:
-            node = stack.pop()
-            if node not in visitados:
-                visitados.add(node)
-                stack.extend(self.control_graph[node])
-        return visitados
-
-    def construir_grupos(self):
-        self.grupos = {}
-        self.entidad_grupos = defaultdict(set)
-        self.grupo_counter = 1
-        
-        # Paso 1: Agrupación por control (solo raíces)
-        raices = self._get_raices_control()
-        visitados_global = set()
-        
-        for raiz in raices:
-            if raiz not in visitados_global:
-                grupo_nombre = f"Grupo_{self.grupo_counter}"
-                self.grupo_counter += 1
-                grupo_miembros = self._dfs_control(raiz)
-                
-                # Crear nuevo grupo
-                self.grupos[grupo_nombre] = grupo_miembros
-                for m in grupo_miembros:
-                    self.entidad_grupos[m].add(grupo_nombre)
-                    visitados_global.add(m)
-
-        # Paso 2: Procesar dependencias unidireccionales
-        for dependiente, fuente in self.dep_unidireccional:
-            if fuente in self.entidad_grupos:
-                grupos_fuente = self.entidad_grupos[fuente]
-                # Obtener subárbol completo del dependiente
-                stack = [dependiente]
-                subarbol = set()
-                visitados_sub = set()
-                while stack:
-                    node = stack.pop()
-                    if node not in visitados_sub:
-                        visitados_sub.add(node)
-                        subarbol.add(node)
-                        stack.extend(self.control_graph[node])
-                
-                # Añadir subárbol a los grupos de la fuente
-                for nodo in subarbol:
-                    for grupo in grupos_fuente:
-                        self.grupos[grupo].add(nodo)
-                        self.entidad_grupos[nodo].add(grupo)
-
-        # Paso 3: Procesar dependencias mutuas
-        for a, b in self.dep_mutua:
-            grupos_a = self.entidad_grupos.get(a, set())
-            grupos_b = self.entidad_grupos.get(b, set())
-            
-            # Añadir 'b' a todos los grupos de 'a'
-            for grupo in grupos_a:
-                if b not in self.grupos[grupo]:
-                    self.grupos[grupo].add(b)
-                    self.entidad_grupos[b].add(grupo)
-            
-            # Añadir 'a' a todos los grupos de 'b'
-            for grupo in grupos_b:
-                if a not in self.grupos[grupo]:
-                    self.grupos[grupo].add(a)
-                    self.entidad_grupos[a].add(grupo)
-
-    def mostrar_grupos(self):
-        print("\n Estado actual de los grupos:")
-        for nombre, miembros in self.grupos.items():
-            print(f"{nombre}: {sorted(miembros)}")
-
-    def mostrar_grupo_de(self, entidad):
-        """
-        Muestra todos los grupos a los que pertenece una entidad específica
-        """
-        if entidad not in self.entidad_grupos:
-            print(f"\n La entidad '{entidad}' no pertenece a ningún grupo")
-            return
-            
-        grupos = self.entidad_grupos[entidad]
-        print(f"\n La entidad '{entidad}' pertenece a los siguientes grupos:")
-        for grupo in sorted(grupos):
-            miembros = sorted(self.grupos[grupo])
-            print(f"  {grupo}: {miembros}")
-
-
-# Simulación
-manager = GrupoManager()
-
-# Test 1
-manager.agregar_ficha("A", "CT", "A1")
-manager.agregar_ficha("A", "CT", "A2")
-manager.agregar_ficha("C", "CT", "A")
-manager.construir_grupos()
-manager.mostrar_grupos()
-
-# Test 2
-manager.agregar_ficha("B", "CT", "B1")
-manager.agregar_ficha("B1", "IE", "A2")
-manager.construir_grupos()
-manager.mostrar_grupos()
-
-# Test 3
-manager.agregar_ficha("B1", "CT", "B2")
-manager.agregar_ficha("B1", "CT", "B3")
-manager.construir_grupos()
-manager.mostrar_grupos()
-
-
-# Test 5
-manager.agregar_ficha("C", "CT", "C1")
-manager.agregar_ficha("C1", "CT", "C2")
-manager.construir_grupos()
-manager.mostrar_grupos()
-
-
-manager.agregar_ficha("Z", "CT", "Z1")
-manager.agregar_ficha("Z1", "IE", "C2")
-manager.agregar_ficha("Z1", "CT", "Z2")
-manager.agregar_ficha("Z1", "CT", "Z3")
-manager.construir_grupos()
-manager.mostrar_grupos()
-
-
-
-#Ver a qué grupo pertenece A2
-manager.mostrar_grupo_de("B1")
-
-
-
-
-
-
-
+    // Validación de roles permitidos para asignar roles a otros usuarios
+    if (authenticatedRole.equals("ADMIN")) {
+        // Los ADMIN pueden asignar cualquier rol
+        return true;
+    } else if (authenticatedRole.equals("SUPERVISOR")) {
+        // Los SUPERVISOR solo pueden asignar roles de "USUARIO"
+        return roleId.equals(roleRepository.findByName("USUARIO").get().getId());
+    } else {
+        // Los usuarios básicos (USUARIO) no pueden asignar roles a otros
+        return false;
+    }
+}
