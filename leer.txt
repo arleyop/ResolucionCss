@@ -1,20 +1,12 @@
-public boolean usuarioAutenticadoPuedeAsignarRol(Long roleId) {
-    // Obtener el usuario autenticado desde el contexto de seguridad (por ejemplo, Spring Security)
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    User authenticatedUser = (User) authentication.getPrincipal();
-    
-    // Asumimos que el rol del usuario autenticado está en 'authenticatedUser'
-    String authenticatedRole = authenticatedUser.getRole(); // O el método adecuado para obtener el rol
-
-    // Validación de roles permitidos para asignar roles a otros usuarios
-    if (authenticatedRole.equals("ADMIN")) {
-        // Los ADMIN pueden asignar cualquier rol
-        return true;
-    } else if (authenticatedRole.equals("SUPERVISOR")) {
-        // Los SUPERVISOR solo pueden asignar roles de "USUARIO"
-        return roleId.equals(roleRepository.findByName("USUARIO").get().getId());
-    } else {
-        // Los usuarios básicos (USUARIO) no pueden asignar roles a otros
-        return false;
-    }
+// Validación de rol
+Long roleId = user.getRoleId();
+if (!usuarioAutenticadoPuedeAsignarRol(roleId)) {
+    throw new SecurityException("No autorizado para asignar este rol.");
 }
+Role role = roleRepository.findById(roleId)
+    .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+
+// Crear y guardar usuario
+appUser.setContrasenia(passwordEncoder.encode(user.getContrasenia()));
+appUser.setRol(role);
+userRepository.save(appUser);
