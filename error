@@ -1,24 +1,16 @@
-// 1. Obtener el ID del rol desde el DTO
-Long roleId = user.getRoleId();
+private Set<Long> getRolesQuePuedeAsignar(AppUser currentUser) {
+	String rol = currentUser.getRole().getNombre();
 
-// 2. Obtener usuario autenticado
-Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-String currentUsername = auth.getName();
-AppUser currentUser = userRepository.findByNombreusuario(currentUsername);
-
-// 3. Obtener la lista de roles que el usuario autenticado puede asignar
-Set<Long> rolesPermitidos = getRolesQuePuedeAsignar(currentUser);
-
-// 4. Validar si el rol solicitado está permitido
-if (!rolesPermitidos.contains(roleId)) {
-    throw new AccessDeniedException("No autorizado para asignar este rol.");
+	// Puedes cargar esto desde BD si lo deseas
+	switch (rol) {
+		case "Administradorusuarios":
+			return Set.of(2L, 3L); // solo roles específicos
+		case "SuperAdmin":
+			// Todos los roles posibles (ejemplo)
+			return roleRepository.findAll().stream()
+				.map(Role::getId_rol)
+				.collect(Collectors.toSet());
+		default:
+			return Collections.emptySet();
+	}
 }
-
-// 5. Solo después de validar, consulta el rol
-Optional<Role> optionalRole = roleRepository.findById(roleId);
-if (optionalRole.isEmpty()) {
-    throw new IllegalArgumentException("El rol especificado no existe.");
-}
-
-Role role = optionalRole.get();
-appUser.setRole(role);
