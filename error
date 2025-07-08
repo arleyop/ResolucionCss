@@ -1,16 +1,42 @@
-private Set<Long> getRolesQuePuedeAsignar(AppUser currentUser) {
-	String rol = currentUser.getRole().getNombre();
+// Obtener el usuario autenticado
+Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+String currentUsername = auth.getName();
+AppUser currentUser = userRepository.findByNombreusuario(currentUsername);
 
-	// Puedes cargar esto desde BD si lo deseas
-	switch (rol) {
+// Obtener los roles que puede asignar
+Set<String> rolesPermitidos = getNombresDeRolesAsignables(currentUser);
+
+// Buscar directamente el rol seguro desde la base de datos
+Optional<Role> optionalRole = roleRepository.findAssignableRoleById(user.getRoleId(), rolesPermitidos);
+
+if (optionalRole.isEmpty()) {
+	throw new AccessDeniedException("No autorizado para asignar este rol o el rol no existe.");
+}
+
+Role role = optionalRole.get();
+appUser.setRole(role);
+
+
+
+
+@Query("SELECT r FROM Role r WHERE r.id_rol = :roleId AND r.nombre IN (:rolesAsignables)")
+Optional<Role> findAssignableRoleById(@Param("roleId") Long roleId, @Param("rolesAsignables") Set<String> rolesPermitidos);
+
+
+
+
+
+private Set<String> getNombresDeRolesAsignables(AppUser currentUser) {
+	String rolActual = currentUser.getRole().getNombre();
+
+	switch (rolActual) {
 		case "Administradorusuarios":
-			return Set.of(2L, 3L); // solo roles específicos
+			return Set.of("Usuario", "Supervisor"); // Solo estos roles puede asignar
 		case "SuperAdmin":
-			// Todos los roles posibles (ejemplo)
 			return roleRepository.findAll().stream()
-				.map(Role::getId_rol)
-				.collect(Collectors.toSet());
+					.map(Role::getNombre)
+					.collect(Collectors.toSet());
 		default:
-			return Collections.emptySet();
+			return Set.of(); // No puede asignar ninguno
 	}
 }
