@@ -1,11 +1,24 @@
-package com.santander.bnc.bsn021.bncbsn021gemotorbackend.exception;
+// 1. Obtener el ID del rol desde el DTO
+Long roleId = user.getRoleId();
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+// 2. Obtener usuario autenticado
+Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+String currentUsername = auth.getName();
+AppUser currentUser = userRepository.findByNombreusuario(currentUsername);
 
-@ResponseStatus(HttpStatus.FORBIDDEN)
-public class AccessDeniedException extends RuntimeException {
-    public AccessDeniedException(String message) {
-        super(message);
-    }
+// 3. Obtener la lista de roles que el usuario autenticado puede asignar
+Set<Long> rolesPermitidos = getRolesQuePuedeAsignar(currentUser);
+
+// 4. Validar si el rol solicitado está permitido
+if (!rolesPermitidos.contains(roleId)) {
+    throw new AccessDeniedException("No autorizado para asignar este rol.");
 }
+
+// 5. Solo después de validar, consulta el rol
+Optional<Role> optionalRole = roleRepository.findById(roleId);
+if (optionalRole.isEmpty()) {
+    throw new IllegalArgumentException("El rol especificado no existe.");
+}
+
+Role role = optionalRole.get();
+appUser.setRole(role);
