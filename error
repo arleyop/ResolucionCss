@@ -1,52 +1,11 @@
-import java.io.*;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+package com.santander.bnc.bsn021.bncbsn021gemotorbackend.exception;
 
-@Service
-public class ExternalAuthServiceImpl implements ExternalAuthService {
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-    @Value("${env.external.token.url}")
-    private String TOKEN_URL;
-
-    @Value("${env.external.token.authorizationheader}")
-    private String AUTHORIZATION_HEADER;
-
-    public String requestToken(String username, String password) {
-        try {
-            // ✅ Codificar parámetros de forma segura
-            String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
-            String encodedPassword = URLEncoder.encode(password, StandardCharsets.UTF_8);
-            String body = "grant_type=password&username=" + encodedUsername + "&password=" + encodedPassword;
-
-            // Crear conexión
-            URL url = new URL(TOKEN_URL);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Authorization", AUTHORIZATION_HEADER);
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setDoOutput(true);
-
-            // ✅ Escribir cuerpo de forma segura
-            try (OutputStream os = connection.getOutputStream()) {
-                os.write(body.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-            }
-
-            // Leer respuesta
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                try (Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8")) {
-                    scanner.useDelimiter("\\A");
-                    return scanner.hasNext() ? scanner.next() : null;
-                }
-            } else {
-                throw new RuntimeException("Error al obtener token: Código HTTP " + responseCode);
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException("Error de conexión con el servidor de autenticación", e);
-        }
+@ResponseStatus(HttpStatus.FORBIDDEN)
+public class AccessDeniedException extends RuntimeException {
+    public AccessDeniedException(String message) {
+        super(message);
     }
 }
