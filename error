@@ -1,4 +1,14 @@
-private boolean isRoleIdValidoParaUsuario(Long roleId, AppUser currentUser) {
-    Set<Long> rolesPermitidos = getIdsRolesPermitidos(currentUser);
-    return rolesPermitidos.contains(roleId);
+private Set<Long> getIdsRolesPermitidos(AppUser currentUser) {
+    String rolActual = currentUser.getRole().getNombre();
+    switch (rolActual) {
+        case "Administradorusuarios":
+            return Set.of(2L, 3L); // Solo puede asignar estos roles
+        case "SuperAdmin":
+            return roleRepository.findAll()
+                    .stream()
+                    .map(Role::getId_rol)
+                    .collect(Collectors.toSet());
+        default:
+            return Collections.emptySet();
+    }
 }
