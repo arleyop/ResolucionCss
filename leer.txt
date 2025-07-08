@@ -1,29 +1,12 @@
-package com.santander.bnc.bsn021.bncbsn021gemotorbackend.service.impl;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.apache.catalina.User;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import com.santander.bnc.bsn021.bncbsn021gemotorbackend.exception.AccessDeniedException;
 
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.dto.AppUserDTO;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.dto.UserDTO;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.exception.UserNotFoundException;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor.AppUser;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor.Role;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.motor.RoleRepository;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.motor.UserRepository;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.service.MonitoreoService;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.service.UserService;
-import com.santander.bnc.bsn021.bncbsn021gemotorbackend.utils.ConstantsUtil;
-
-import jakarta.transaction.Transactional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -43,6 +26,7 @@ public class UserServiceImpl implements UserService {
 		Map<String, Object> response = new HashMap<>();
 		try {
 			AppUser appUser = new AppUser();
+
 			if (user.getNombreusuario() != null && user.getNombreusuario().matches("[xn].*")) {
 				appUser.setNombreusuario(user.getNombreusuario());
 			} else {
@@ -61,46 +45,46 @@ public class UserServiceImpl implements UserService {
 			// Validación de rol
 			Long roleId = user.getRoleId();
 			if (!usuarioAutenticadoPuedeAsignarRol(roleId)) {
-				throw new SecurityException("No autorizado para asignar este rol.");
+				throw new AccessDeniedException("No autorizado para asignar este rol.");
 			}
-			Role role = roleRepository.findById(roleId).orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
-			// Crear y guardar usuario
+			Role role = roleRepository.findById(roleId)
+					.orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+
 			appUser.setRole(role);
 			userRepository.save(appUser);
+
 			response.put(ConstantsUtil.STATUS, ConstantsUtil.SUCCESS);
 			response.put(ConstantsUtil.DATA, null);
+
 			monitoreoService.registrarAccionMonitoreo(ConstantsUtil.MONITOREO_ACCION_GUARDAR,
 					ConstantsUtil.MODULO_GESTION_USUARIO_SUBMODULO_USUARIO);
 
 		} catch (Exception e) {
 			response.put(ConstantsUtil.STATUS, "error");
-			response.put(ConstantsUtil.MESSAGE, "Ha ocurrido un error, en servidor API");
+			response.put(ConstantsUtil.MESSAGE, "Ha ocurrido un error en el servidor API");
 		}
 		return response;
-
 	}
 
-	public boolean usuarioAutenticadoPuedeAsignarRol(Long roleId) {
-		// Obtener el usuario autenticado desde el contexto de seguridad (por ejemplo,
-		// Spring Security)
-
+	private boolean usuarioAutenticadoPuedeAsignarRol(Long targetRoleId) {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication != null && authentication.isAuthenticated()) {
 			String username = authentication.getName();
-			AppUser user = userRepository.findByNombreusuario(username);
+			AppUser currentUser = userRepository.findByNombreusuario(username);
+			String currentUserRole = currentUser.getRole().getNombre();
 
-			// Asumimos que el rol del usuario autenticado está en 'authenticatedUser'
-			String authenticatedRole = user.getRole().getNombre(); // O el método adecuado para obtener el rol
+			// Simulación de lista blanca por rol
+			Map<String, Set<Long>> permisosAsignacion = new HashMap<>();
+			permisosAsignacion.put("Administradorusuarios", Set.of(2L, 3L)); // Solo puede asignar ciertos roles
+			permisosAsignacion.put("SuperAdmin", null); // Puede asignar todos
 
-			// Validación de roles permitidos para asignar roles a otros usuarios
-			if (authenticatedRole.equals("Administradorusuarios")) {
-				// Los ADMIN pueden asignar cualquier rol
+			if ("SuperAdmin".equals(currentUserRole)) {
 				return true;
-			} else {
-				// Los usuarios básicos (USUARIO) no pueden asignar roles a otros
-				return false;
 			}
+
+			Set<Long> rolesPermitidos = permisosAsignacion.get(currentUserRole);
+			return rolesPermitidos != null && rolesPermitidos.contains(targetRoleId);
 		}
 		return false;
 	}
@@ -115,31 +99,35 @@ public class UserServiceImpl implements UserService {
 	public Map<String, Object> updateUser(Long id, UserDTO body) {
 		Map<String, Object> response = new HashMap<>();
 		try {
-
 			AppUser appUser = userRepository.findById(id)
 					.orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
 			appUser.setNombre(body.getNombre());
 			appUser.setApellido(body.getApellido());
 			appUser.setCedula(body.getCedula());
 			appUser.setCorreo(body.getCorreo());
 			appUser.setEsActivo(body.isEsActivo());
+
 			// Validación de rol
 			Long roleId = body.getRoleId();
 			if (!usuarioAutenticadoPuedeAsignarRol(roleId)) {
-				throw new SecurityException("No autorizado para asignar este rol.");
+				throw new AccessDeniedException("No autorizado para asignar este rol.");
 			}
-			Role role = roleRepository.findById(body.getRoleId())
-					.orElseThrow(() -> new RuntimeException("Role no encontrado"));
-			appUser.setRole(role);
+			Role role = roleRepository.findById(roleId)
+					.orElseThrow(() -> new RuntimeException("Rol no encontrado"));
 
+			appUser.setRole(role);
 			userRepository.save(appUser);
+
 			response.put("status", "success");
 			response.put("data", null);
+
 			monitoreoService.registrarAccionMonitoreo(ConstantsUtil.MONITOREO_ACCION_EDITAR,
 					ConstantsUtil.MODULO_GESTION_USUARIO_SUBMODULO_USUARIO);
+
 		} catch (Exception e) {
 			response.put("status", "error");
-			response.put("message", "Error interno del servidor: " + "Ha ocurrido un error, en servidor API");
+			response.put("message", "Error interno del servidor: Ha ocurrido un error en el servidor API");
 		}
 		return response;
 	}
@@ -170,23 +158,15 @@ public class UserServiceImpl implements UserService {
 	}
 
 	public AppUserDTO getUser(Long id) {
-		// Validar que el identificador no sea nulo
 		if (id == null) {
 			throw new IllegalArgumentException("El identificador del usuario no puede ser nulo.");
 		}
-		// Buscar el usuario en la base de datos
 		Optional<AppUser> userOptional = userRepository.findById(id);
-
-		// Si el usuario no se encuentra, lanzar una excepción personalizada
 		if (!userOptional.isPresent()) {
 			throw new UserNotFoundException("Usuario con el identificador " + id + " no encontrado.");
 		}
-
-		// Convierte el modelo de usuario a DTO y lo retorna
 		AppUser user = userOptional.get();
 		return new AppUserDTO(user.getId_app_user(), user.getNombreusuario(), user.getNombre(), user.getApellido(),
 				user.getCedula(), user.getCorreo(), true, user.getRole().getId_rol(), user.getRole().getNombre());
-
 	}
-
 }
