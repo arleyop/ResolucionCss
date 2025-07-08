@@ -1,14 +1,4 @@
-Long inputRoleId = user.getRoleId();
-
-// Validar acceso de forma explícita
-if (inputRoleId == null || !isRoleIdValidoParaUsuario(inputRoleId, currentUser)) {
-    throw new AccessDeniedException("No autorizado para asignar este rol.");
+private boolean isRoleIdValidoParaUsuario(Long roleId, AppUser currentUser) {
+    Set<Long> rolesPermitidos = getIdsRolesPermitidos(currentUser);
+    return rolesPermitidos.contains(roleId);
 }
-
-// Ya validado: cargar el rol desde BD
-Optional<Role> optionalRole = roleRepository.findById(inputRoleId);
-if (optionalRole.isEmpty()) {
-    throw new IllegalArgumentException("El rol especificado no existe.");
-}
-Role role = optionalRole.get();
-appUser.setRole(role);
