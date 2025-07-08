@@ -1,64 +1,63 @@
 package com.santander.bnc.bsn021.bncbsn021gemotorbackend.infrastructure.external.auth.impl;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Repository;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import com.santander.bnc.bsn021.bncbsn021gemotorbackend.infrastructure.external.auth.ExternalAuthService;
 
 @Repository
 public class ExternalAuthServiceImpl implements ExternalAuthService {
 
-	@Value("${env.external.token.url}")
-	private String tokenUrl;
-	@Value("${env.external.token.authorizationheader}")
-	private String authorizationHeader;
+    @Value("${env.external.token.url}")
+    private String tokenUrl;
 
-	public String requestToken(String username, String password) {
-		try {
-			String body = String.format("grant_type=password&username=%s&password=%s", username, password);
+    @Value("${env.external.token.authorizationheader}")
+    private String authorizationHeader;
 
-			URL url = new URL(tokenUrl);
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-			connection.setRequestMethod("POST");
-			connection.setRequestProperty("Authorization", authorizationHeader);
-			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			connection.setDoOutput(true);
+    private final RestTemplate restTemplate = new RestTemplate();
 
-			try (OutputStream os = connection.getOutputStream()) {
-				os.write(body.getBytes());
-				os.flush();
-			}
+    @Override
+    public String requestToken(String username, String password) {
+        try {
+            // Construir headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("Authorization", authorizationHeader);
 
-			// Verificar la respuesta
-			int responseCode = connection.getResponseCode();
-			if (responseCode == HttpURLConnection.HTTP_OK) {
-				// Leer la respuesta
-				try (java.util.Scanner scanner = new java.util.Scanner(connection.getInputStream(), "UTF-8")) {
-					scanner.useDelimiter("\\A");
-					return scanner.hasNext() ? scanner.next() : "";
-				}
-			} else {
-				// Leer el error
-				try (java.util.Scanner scanner = new java.util.Scanner(connection.getErrorStream(), "UTF-8")) {
-					scanner.useDelimiter("\\A");
-					String errorResponse = scanner.hasNext() ? scanner.next() : "Error desconocido";
-					throw new RuntimeException(
-							"Error al solicitar el token: Código HTTP " + responseCode + " - " + errorResponse);
-				}
-			}
-		} catch (MalformedURLException e) {
-			throw new RuntimeException("URL mal formada: " + tokenUrl);
-		} catch (IOException e) {
-			throw new RuntimeException("Error de comunicación con el servidor OAuth");
-		} catch (Exception e) {
-			throw new RuntimeException("Error inesperado al comunicarse con el servicio OAuth: ");
-		}
-	}
+            // Construir cuerpo
+            String body = String.format("grant_type=password&username=%s&password=%s", username, password);
+            HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
+            // Enviar solicitud POST
+            ResponseEntity<String> response = restTemplate.exchange(
+                    tokenUrl,
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+
+            // Verificar respuesta
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return response.getBody();
+            } else {
+                throw new RuntimeException("Error al solicitar el token: Código HTTP " +
+                        response.getStatusCodeValue() + " - " + response.getBody());
+            }
+
+        } catch (HttpClientErrorException e) {
+            // Errores HTTP 4xx o 5xx
+            String responseBody = e.getResponseBodyAsString();
+            throw new RuntimeException("Error HTTP al solicitar token: " +
+                    e.getRawStatusCode() + " - " + responseBody, e);
+        } catch (RestClientException e) {
+            // Otros errores de red o cliente
+            throw new RuntimeException("Error de comunicación con el servidor OAuth: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error inesperado al comunicarse con el servicio OAuth: " + e.getMessage(), e);
+        }
+    }
 }
