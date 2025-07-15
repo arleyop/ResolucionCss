@@ -1,14 +1,17 @@
-private Set<Long> getIdsRolesPermitidos(AppUser currentUser) {
-    String rolActual = currentUser.getRole().getNombre();
-    switch (rolActual) {
-        case "Administradorusuarios":
-            return Set.of(2L, 3L); // Solo puede asignar estos roles
-        case "SuperAdmin":
-            return roleRepository.findAll()
-                    .stream()
-                    .map(Role::getId_rol)
-                    .collect(Collectors.toSet());
-        default:
-            return Collections.emptySet();
-    }
-}
+Buenos días,
+
+Se realizaron sesiones de trabajo con Ingrit y Angélica, en las cuales se efectuaron los ajustes correspondientes desde el área técnica al documento de Roles, Perfiles y Matriz de Accesos.
+
+Actualmente requerimos de su colaboración para completar la información pendiente, específicamente en la hoja de “Perfiles”, donde deben definirse:
+
+Los perfiles que pueden realizar cambios en la aplicación.
+
+Las áreas implicadas por perfil.
+
+La relación entre perfil y rol. (Ejemplo: el perfil "Riesgos" solo puede tener asignado el rol de “Administrador”).
+
+Una breve descripción funcional de cada perfil.
+
+Agradecemos su apoyo para completar estos campos, lo cual nos permitirá cerrar esta etapa del proceso de manera oportuna y continuar con las siguientes fases.
+
+Quedamos atentos a cualquier duda o aclaración adicional.
