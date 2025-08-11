@@ -1,3 +1,77 @@
+/**
+ * [EN] Gets the customer data and groups it by Customer (grupo)
+ */
+getCustomerData(documentType: string, documentNumber: string): void {
+  this.isQueryLoading = true;
+  this.isTableLoading = true;
+  this.tableStateLabel = 'Cargando...';
+
+  this.simulatorService
+    .getCustomerData(documentType, documentNumber)
+    .subscribe({
+      next: (data: SimulatorCustomer[]) => {
+        
+        // Mapeo a TableData
+        let dataSource: TableData[] = data.map((item: SimulatorCustomer) => {
+          let row: TableData = {
+            Penumdoc: item.penumdoc,
+            Petipdoc: item.petipdoc,
+            Penumper: item.penumper,
+            Customer: item.penomper, // aquí asumo que este es el grupo
+            Portfolio: item.cartera,
+            FinancialGuarantee: item.garantiaFinanciera,
+            TechnicalGuarantee: item.garantiaTecnica,
+            Derivatives: item.derivados,
+            TotalExposure: item.totalExposicion,
+            Provisions: item.provisiones,
+            Guarantees: item.garantias,
+            NetExposure: item.exposicionNeta,
+            Consumption: item.consumoPb,
+            Type:
+              item.penumdoc == documentNumber && item.petipdoc == documentType
+                ? 'P'
+                : 'S',
+          };
+
+          if (item.penumdoc == documentNumber && item.petipdoc == documentType) {
+            this.simulatorCustomer = item;
+            this.dataRowId = documentNumber;
+          }
+          return row;
+        });
+
+        // Agrupar por grupo (Customer en este caso)
+        const grouped: { [key: string]: TableData[] } = {};
+        dataSource.forEach(row => {
+          if (!grouped[row.Customer]) {
+            grouped[row.Customer] = [];
+          }
+          grouped[row.Customer].push(row);
+        });
+
+        // Convertir el objeto a un arreglo para *ngFor en la vista
+        this.tableGroups = Object.keys(grouped).map(key => ({
+          grupo: key,
+          data: grouped[key]
+        }));
+
+        this.switchDataSource(true);
+      },
+      error: (error: any) => {
+        console.error('Error getting customer data:', error);
+        this.isQueryLoading = false;
+        this.isTableLoading = false;
+        this.isTableFailed = true;
+        this.tableStateLabel = 'Error al obtener los datos del cliente.';
+        swal('Error al obtener los datos del cliente', error, 'error');
+      },
+      complete: () => {
+        this.isQueryLoading = false;
+        this.isTableLoading = false;
+        this.tableStateLabel = 'Listo.';
+      },
+    });
+}
  /**
    * [EN] Gest the custumer data
    */
