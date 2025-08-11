@@ -1,3 +1,20 @@
+<div *ngFor="let group of tableGroups">
+  <h3>Grupo: {{ group.grupo }}</h3>
+  <app-shared-table
+    [dataSource]="group.data"
+    [columnConfig]="columnConfig"
+    [columId]="columId"
+    [enableSearch]="false"
+    [stateLabel]="tableStateLabel"
+    [(dataRowId)]="dataRowId"
+    [isProcessing]="isTableLoading"
+    [isSelectable]="false"
+    [showTotals]="true"
+    [totalsColumnLabel]="'Customer'"
+    [isFailed]="isTableFailed"
+    [isDownloadable]="true"
+  ></app-shared-table>
+</div>
 /**
  * [EN] Gets the customer data and groups it by Customer (grupo)
  */
