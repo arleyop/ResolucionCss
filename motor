@@ -1,47 +1,22 @@
-// dentro del array children del ProtectedComponent
-{
-  path: '',
-  canActivate: [AuthGuard],
-  data: { defaultRedirect: true } // bandera que detectará el guard
-},
-// luego vienen el resto de rutas como GestiondeUsuarios/Modulo, etc.
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
+import { LoginComponent } from './components/pages/login/login.component';
+import { AuthGuard } from './core';
+import { ErrorPageComponent } from './components/features/feature1/components/error-page/error-page.component';
 
+const routes: Routes = [
+  { path: 'login', component: LoginComponent },
+  { path: 'error/:type', component: ErrorPageComponent },
+  { path: 'motor',
+   loadChildren :()=> import('./components/pages/protected.modulo')
+   .then(module => module.ProtectedModule),
+   canActivate: [AuthGuard] // Protege la ruta con el AuthGuard
+  },
+  { path: '**', redirectTo: 'login' }
+];
 
-canActivate(
-  route: ActivatedRouteSnapshot,
-  state: RouterStateSnapshot
-): Observable<boolean> {
-  return this.authService.isLogged.pipe(
-    take(1),
-    map((isLoggedIn: boolean) => {
-      // Si no está logueado, mandamos a login
-      if (!isLoggedIn) {
-        this.router.navigate(['/login']);
-        return false;
-      }
-
-      const allowedRoles = route.data['roles'] as Array<string>;
-      const userRole = this.authService.getUserRole();
-
-      // Si la ruta tiene la bandera defaultRedirect -> hacemos la redirección según rol
-      if (route.data && route.data['defaultRedirect']) {
-        if (userRole === 'Administrador') {
-          // ruta exacta que ya tienes registrada en protected-routing.module.ts
-          this.router.navigate(['GestiondeUsuarios/Usuario']);
-        } else {
-          // ruta donde se muestra Top20
-          this.router.navigate(['Apetito/Top20']);
-        }
-        return false; // no cargar el componente vacío
-      }
-
-      // Validación normal por roles (cuando la ruta tenga data.roles)
-      if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
-        this.router.navigate(['unauthorized']);
-        return false;
-      }
-
-      return true;
-    })
-  );
-}
+@NgModule({
+  imports: [RouterModule.forRoot(routes)],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }
