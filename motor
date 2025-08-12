@@ -1,93 +1,47 @@
-package com.santander.bnc.bsn021.bncbsn021gemotorbackend.config;
+// dentro del array children del ProtectedComponent
+{
+  path: '',
+  canActivate: [AuthGuard],
+  data: { defaultRedirect: true } // bandera que detectará el guard
+},
+// luego vienen el resto de rutas como GestiondeUsuarios/Modulo, etc.
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.core.env.Environment;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import javax.sql.DataSource;
-import java.util.Properties;
+canActivate(
+  route: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot
+): Observable<boolean> {
+  return this.authService.isLogged.pipe(
+    take(1),
+    map((isLoggedIn: boolean) => {
+      // Si no está logueado, mandamos a login
+      if (!isLoggedIn) {
+        this.router.navigate(['/login']);
+        return false;
+      }
 
-@Configuration
-@EnableTransactionManagement
-@EnableJpaRepositories(
-    basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.motor",
-    excludeFilters = @ComponentScan.Filter(
-        type = FilterType.REGEX, 
-        pattern = "com\\.santander\\.bnc\\.bsn021\\.bncbsn021gemotorbackend\\.repository\\.golden\\..*"
-    ),
-    entityManagerFactoryRef = "gemotorEntityManagerFactory",
-    transactionManagerRef = "gemotorTransactionManager"
-)
-@EntityScan(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor")
-public class GemotorConfig {
+      const allowedRoles = route.data['roles'] as Array<string>;
+      const userRole = this.authService.getUserRole();
 
-    @Value("${env.database.gemotor.hibernate.default_schema}")
-    private String defaultSchema;
-
-    @Autowired
-    private Environment environment;
-
-    @Primary
-    @Bean(name = "gemotorDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.gemotor")
-    public DataSource gemotorDataSource() {
-        return DataSourceBuilder.create().build();
-    }
-
-    @Primary
-    @Bean(name = "gemotorEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean gemotorEntityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(gemotorDataSource());
-        em.setPackagesToScan("com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.motor");
-        em.setPersistenceUnitName("gemotorPU");
-        em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        em.setJpaProperties(hibernateProperties());
-        return em;
-    }
-
-    @Primary
-    @Bean(name = "gemotorTransactionManager")
-    public PlatformTransactionManager gemotorTransactionManager(
-            @Qualifier("gemotorEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
-        return new JpaTransactionManager(emf.getObject());
-    }
-
-    private Properties hibernateProperties() {
-        Properties properties = new Properties();
-        
-        if (environment.getActiveProfiles().length > 0 && "test".equals(environment.getActiveProfiles()[0])) {
-            properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+      // Si la ruta tiene la bandera defaultRedirect -> hacemos la redirección según rol
+      if (route.data && route.data['defaultRedirect']) {
+        if (userRole === 'Administrador') {
+          // ruta exacta que ya tienes registrada en protected-routing.module.ts
+          this.router.navigate(['GestiondeUsuarios/Usuario']);
         } else {
-            // Oracle dialect
-            properties.put("hibernate.dialect", "org.hibernate.dialect.OracleDialect");
+          // ruta donde se muestra Top20
+          this.router.navigate(['Apetito/Top20']);
         }
-        
-        properties.put("hibernate.show_sql", "true");
-        properties.put("hibernate.hbm2ddl.auto", "update");
-        properties.put("hibernate.default_schema", defaultSchema);
-        return properties;
-    }
+        return false; // no cargar el componente vacío
+      }
 
-    @Bean(name = "gemotorJdbcTemplate")
-    public JdbcTemplate gemotorJdbcTemplate(
-        @Qualifier("gemotorDataSource") DataSource dataSource
-    ) {
-        return new JdbcTemplate(dataSource);
-    }
+      // Validación normal por roles (cuando la ruta tenga data.roles)
+      if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+        this.router.navigate(['unauthorized']);
+        return false;
+      }
+
+      return true;
+    })
+  );
 }
