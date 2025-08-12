@@ -1,99 +1,52 @@
-package com.santander.bnc.bsn021.bncbsn021gemotorbackend.config;
+import { Injectable } from '@angular/core';
+import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
+import { Observable } from 'rxjs';
+import { AuthService } from '../services/auth';
+import { map, take } from 'rxjs/operators';
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
-import org.springframework.core.env.Environment;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.transaction.PlatformTransactionManager;
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthGuard implements CanActivate {
 
-import javax.sql.DataSource;
-import java.util.Properties;
+  constructor(private authService: AuthService, private router: Router) { }
 
-@Configuration
-@EnableTransactionManagement
-@EnableJpaRepositories(
-    basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.repository.golden",
-    excludeFilters = @ComponentScan.Filter(
-        type = FilterType.REGEX, 
-        pattern = "com\\.santander\\.bnc\\.bsn021\\.bncbsn021gemotorbackend\\.repository\\.motor\\..*"
-    ),
-    entityManagerFactoryRef = "goldenEntityManagerFactory",
-    transactionManagerRef = "goldenTransactionManager"
-)
-@EntityScan(basePackages = "com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.golden")
-public class GoldenConfig {
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot
+  ): Observable<boolean> {
+    return this.authService.isLogged.pipe(
+      take(1),
+      map((isLoggedIn: boolean) => {
+      //  if (!isLoggedIn) {
+      //    this.router.navigate(['/login']);
+      //    return false;
+      //  }
 
-    @Value("${env.database.golden.hibernate.default_schema}")
-    private String defaultSchema;
+        // Si se especifican roles permitidos, verificar que el usuario tenga uno de esos roles
+        const allowedRoles = route.data['roles'] as Array<string>;
+        const url = state.url;
+        console.log(`AuthGuard: roles para la ruta ${ url }:`,allowedRoles);
+        
+        const userRole = this.authService.getUserRole();
+        console.log(`AuthGuard: rol del usuario:`,userRole);
 
-    @Autowired
-    private Environment environment;
-
-    @Bean(name = "goldenDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.golden")
-    public DataSource goldenDataSource() {
-        return DataSourceBuilder.create().build();
-    }
-
-    @Bean(name = "goldenEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean goldenEntityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(goldenDataSource());
-        em.setPackagesToScan("com.santander.bnc.bsn021.bncbsn021gemotorbackend.model.golden");
-        em.setPersistenceUnitName("goldenPU");
-        em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        em.setJpaProperties(hibernateProperties());
-        return em;
-    }
-
-    @Bean(name = "goldenTransactionManager")
-    public PlatformTransactionManager goldenTransactionManager(
-        @Qualifier("goldenEntityManagerFactory") LocalContainerEntityManagerFactoryBean emf) {
-        return new JpaTransactionManager(emf.getObject());
-    }
-
-    private Properties hibernateProperties() {
-        Properties properties = new Properties();
-
-        if (environment.getActiveProfiles().length > 0 && "test".equals(environment.getActiveProfiles()[0])) {
-            properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
-        } else {
-            // SQL Server dialect
-            properties.put("hibernate.dialect", "org.hibernate.dialect.SQLServer2016Dialect");
+        if (route.data['defaultRedirect']) {
+          if (userRole === 'Administradorusuarios') {
+              this.router.navigate(['GestiondeUsuarios/Usuario'])
+            } else {
+              this.router.navigate(['Top20'])
+            }
+        return false;
         }
 
-        properties.put("hibernate.show_sql", "true");
-        properties.put("hibernate.hbm2ddl.auto", "update");
-        
-        // SQL Server schema configuration
-        if (defaultSchema != null && !defaultSchema.isEmpty()) {
-            properties.put("hibernate.default_schema", defaultSchema);
+        if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+          this.router.navigate(['unauthorized']); // Redirige a una página "no autorizado"
+          return false;
         }
-        
-        // SQL Server specific properties
-        properties.put("hibernate.format_sql", "true");
-        properties.put("hibernate.jdbc.lob.non_contextual_creation", "true");
-        
-        return properties;
-    }
 
-    @Bean(name = "goldenJdbcTemplate")
-    public JdbcTemplate goldenJdbcTemplate(
-        @Qualifier("goldenDataSource") DataSource dataSource
-    ) {
-        return new JdbcTemplate(dataSource);
-    }
+        return true;
+      })
+    );
+  }
 }
