@@ -1,161 +1,174 @@
-<div *ngFor="let group of tableGroups">
-  <h3>Grupo: {{ group.grupo }}</h3>
-  <app-shared-table
-    [dataSource]="group.data"
-    [columnConfig]="columnConfig"
-    [columId]="columId"
-    [enableSearch]="false"
-    [stateLabel]="tableStateLabel"
-    [(dataRowId)]="dataRowId"
-    [isProcessing]="isTableLoading"
-    [isSelectable]="false"
-    [showTotals]="true"
-    [totalsColumnLabel]="'Customer'"
-    [isFailed]="isTableFailed"
-    [isDownloadable]="true"
-  ></app-shared-table>
-</div>
-/**
- * [EN] Gets the customer data and groups it by Customer (grupo)
- */
-getCustomerData(documentType: string, documentNumber: string): void {
-  this.isQueryLoading = true;
-  this.isTableLoading = true;
-  this.tableStateLabel = 'Cargando...';
 
-  this.simulatorService
-    .getCustomerData(documentType, documentNumber)
-    .subscribe({
-      next: (data: SimulatorCustomer[]) => {
-        
-        // Mapeo a TableData
-        let dataSource: TableData[] = data.map((item: SimulatorCustomer) => {
-          let row: TableData = {
-            Penumdoc: item.penumdoc,
-            Petipdoc: item.petipdoc,
-            Penumper: item.penumper,
-            Customer: item.penomper, // aquí asumo que este es el grupo
-            Portfolio: item.cartera,
-            FinancialGuarantee: item.garantiaFinanciera,
-            TechnicalGuarantee: item.garantiaTecnica,
-            Derivatives: item.derivados,
-            TotalExposure: item.totalExposicion,
-            Provisions: item.provisiones,
-            Guarantees: item.garantias,
-            NetExposure: item.exposicionNeta,
-            Consumption: item.consumoPb,
-            Type:
-              item.penumdoc == documentNumber && item.petipdoc == documentType
-                ? 'P'
-                : 'S',
-          };
 
-          if (item.penumdoc == documentNumber && item.petipdoc == documentType) {
-            this.simulatorCustomer = item;
-            this.dataRowId = documentNumber;
-          }
-          return row;
-        });
 
-        // Agrupar por grupo (Customer en este caso)
-        const grouped: { [key: string]: TableData[] } = {};
-        dataSource.forEach(row => {
-          if (!grouped[row.Customer]) {
-            grouped[row.Customer] = [];
-          }
-          grouped[row.Customer].push(row);
-        });
 
-        // Convertir el objeto a un arreglo para *ngFor en la vista
-        this.tableGroups = Object.keys(grouped).map(key => ({
-          grupo: key,
-          data: grouped[key]
-        }));
-
-        this.switchDataSource(true);
+const routes: Routes = [
+  {
+    path: '', 
+    component: ProtectedComponent,
+    canActivate: [AuthGuard],
+    data: { roles: ['Administradorusuarios',	'Administrador','Analista',	'Comercial'	,'Consulta'] }, 
+    children: [
+      {
+        path: 'GestiondeUsuarios/Modulo',
+        component: ModuloComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administradorusuarios'] } 
       },
-      error: (error: any) => {
-        console.error('Error getting customer data:', error);
-        this.isQueryLoading = false;
-        this.isTableLoading = false;
-        this.isTableFailed = true;
-        this.tableStateLabel = 'Error al obtener los datos del cliente.';
-        swal('Error al obtener los datos del cliente', error, 'error');
+      {
+        path: 'GestiondeUsuarios/Rol',
+        component: RolComponent,
+        canActivate:[AuthGuard],
+        data: { roles: ['Administradorusuarios'] } 
       },
-      complete: () => {
-        this.isQueryLoading = false;
-        this.isTableLoading = false;
-        this.tableStateLabel = 'Listo.';
+      {
+        path: 'GestiondeUsuarios/Usuario',
+        component: UsuarioComponent,
+        canActivate:[AuthGuard],
+        data: { roles: ['Administradorusuarios' ] } 
       },
-    });
-}
- /**
-   * [EN] Gest the custumer data
-   */
-  getCustomerData(documentType: string, documentNumber: string): void {
-    this.isQueryLoading = true;
-    this.isTableLoading = true;
-    this.tableStateLabel = 'Cargando...';
-    this.simulatorService
-      .getCustomerData(documentType, documentNumber)
-      .subscribe({
-        next: (data: SimulatorCustomer[]) => {
-          let dataSource: TableData[] = data.map((item: SimulatorCustomer) => {
-            let row: TableData = {
-              Penumdoc: item.penumdoc,
-              Petipdoc: item.petipdoc,
-              Penumper: item.penumper,
-              Customer: item.penomper,
-              Portfolio: item.cartera,
-              FinancialGuarantee: item.garantiaFinanciera,
-              TechnicalGuarantee: item.garantiaTecnica,
-              Derivatives: item.derivados,
-              TotalExposure: item.totalExposicion,
-              Provisions: item.provisiones,
-              Guarantees: item.garantias,
-              NetExposure: item.exposicionNeta,
-              Consumption: item.consumoPb,
-              Type:
-                item.penumdoc == documentNumber && item.petipdoc == documentType
-                  ? 'P'
-                  : 'S',
-            };
-            if (
-              item.penumdoc == documentNumber &&
-              item.petipdoc == documentType
-            ) {
-              this.simulatorCustomer = item;
-              this.dataRowId = documentNumber;
-            }
-
-            
-            return row;
-          });
-
-
-          // Sort data source so the selected row is the first
-          dataSource = dataSource.sort((a: TableData, b: TableData) => {
-            if (a.Penumdoc == documentNumber && a.Petipdoc == documentType) {
-              return -1;
-            } else {
-              return 1;
-            }
-          });
-          this.tableOriginalDataSource = dataSource;
-          this.switchDataSource(true);
-        },
-        error: (error: any) => {
-          console.error('Error getting customer data:', error);
-          this.isQueryLoading = false;
-          this.isTableLoading = false;
-          this.isTableFailed = true;
-          this.tableStateLabel = 'Error al obtener los datos del cliente.';
-          swal('Error al obtener los datos del cliente', error, 'error');
-        },
-        complete: () => {
-          this.isQueryLoading = false;
-          this.isTableLoading = false;
-          this.tableStateLabel = 'Listo.';
-        },
-      });
+      {
+        path: 'GestiondeUsuarios/Monitoreo',
+        component: MonitoreoComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administradorusuarios'] } 
+      },
+      {
+        path: 'Procesos/Carga',
+        component: TransferStatusComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Procesos/Calculo/Manual',
+        component: CalculoManualComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Procesos/Carga/Manual',
+        component: CargaManualComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      }, 
+      {
+        path: 'Procesos/Calculo',
+        component: CalculoComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },     
+      {
+        path: 'Parametria/Exposición',
+        component: ExposicionComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Parametria/Garantías',
+        component: GarantiaComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Parametria/Moneda',
+        component: MonedaComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Parametria/Límite',
+        component: LimiteComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador'] }  
+      },
+      {
+        path: 'Marcaciones/Marcaciones',
+        component: MarcacionComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista'] }  
+      },
+      {
+        path: 'Marcaciones/CreacionMarcacionClientes',
+        component: ClienteComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista'] }  
+      },
+      {
+        path: 'Marcaciones/CreacionMarcacionOperaciones',
+        component: OperacionComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista'] }  
+      },
+      {
+        path: 'Apetito/Sector',
+        component: SectorComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Apetito/Top20',
+        component: Top20Component,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Apetito/Rating',
+        component: RatingComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Reportes/Patrimonio',
+        component: ReportingAssetsComponent,
+        canActivate: [AuthGuard],
+        data: { roles: [ 'Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Reportes/Límites',
+        component: ReportingLimitsComponent,
+        canActivate: [AuthGuard],
+        data: { roles: [ 'Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Reportes/Garantes',
+        component: ReportingGuarantorsComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Administrador','Analista',	'Comercial','Consulta'] }  
+      },
+      {
+        path: 'Simulador/Simulador',
+        component: SimuladorComponent,
+        canActivate: [AuthGuard],
+        data: { roles: [ 'Administrador','Analista',	'Comercial'] }  
+      },
+      {
+        path: 'Interconectados/CargaCliente',
+        component: CargaClienteComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Comercial'] }  
+      } ,
+      {
+        path: 'Interconectados/Grupo',
+        component: GrupoComponent,
+        canActivate: [AuthGuard],
+        data: { roles: ['Comercial'] }  
+      },      
+      {
+        path: '', 
+        canActivate:[AuthGuard],
+        component: Top20Component,
+      }
+    ]
+  },{
+    path: '**',
+    component: UnauthorizedComponent,
+    canActivate: [AuthGuard],
+    data: { roles: ['Administradorusuarios', 'Administrador','Analista',	'Comercial','Consulta'] }  
   }
+];
+
+@NgModule({
+  imports: [RouterModule.forChild(routes)],
+  exports: [RouterModule]
+})
+export class ProtectedRoutingModule { }
