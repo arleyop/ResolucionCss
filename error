@@ -1,22 +1,14 @@
-this.tableNewDataSource = tableOriginalDataSourceClone.map(
-  (group: { grupo: string; data: TableData[] }) => {
-    const updatedData = group.data.map((item: TableData) => {
-      if (item.Penumdoc == this.dataRowId) {
-        return {
-          ...item,
-          Portfolio: element.cartera,
-          Derivatives: element.derivados,
-          NetExposure: element.exposicionNeta,
-          Guarantees: element.garantia,
-          TechnicalGuarantee: element.gtiaTecnica,
-          FinancialGuarantee: element.gtiaFinanciera, // 👀 aquí corregí porque estabas asignando gtiaTecnica dos veces
-          Consumption: element.porcConsumo,
-          TotalExposure: element.totalExposicion,
-        };
-      }
-      return item;
-    });
+te queria realizar una pregunta ya que me acabe de reunir con yadira 
 
-    return { ...group, data: updatedData };
-  }
-);
+
+
+el formato de Derivados tenemos dos versiones el de yadira  que se lo envia alfredo pero no tenemos correo de  que los derivados van a llegar en ese fortamo y tenemos el formado de derivados diarios que me llega a mi tampoco hay correo de que ese formato es correcto 
+
+
+
+para no realizar un reproceso me gustaria saber que tipo de formato a utilizar el que tiene yadira es de la carga de mayo  31/05/2025  
+
+
+
+te adjunto los dos formatos que hay 
+
