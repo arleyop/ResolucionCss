@@ -1,0 +1,124 @@
+tableGroups: { grupo: string; nombre: string; data: TableData[] }[] = [];
+tableOriginalGroups: { grupo: string; nombre: string; data: TableData[] }[] = [];
+tableNewGroups: { grupo: string; nombre: string; data: TableData[] }[] = [];
+
+
+
+onSimulateButtonClicked(): void {
+  this.isSimulationLoading = true;
+  this.isTableLoading = true;
+  this.isTableFailed = false;
+  this.tableStateLabel = 'Simulando.';
+
+  const simulatorRequest: SimulatorRequest = {
+    penumdocU: this.documentNumber,
+    petipdocU: this.documentType,
+    carteraU: this.parametersFormGroup.get('portfolioField')?.value,
+    moneCartera: this.parametersFormGroup.get('portfolioCurrencyField')?.value,
+    gtiaFinancieraU: this.parametersFormGroup.get('financialGuaranteeField')?.value,
+    moneGtiaFinanciera: this.parametersFormGroup.get('financialGuaranteeCurrencyField')?.value,
+    gtiaTecnicaU: this.parametersFormGroup.get('technicalGuaranteeField')?.value,
+    moneGtiaTecnica: this.parametersFormGroup.get('technicalGuaranteeCurrencyField')?.value,
+    derivadosU: this.parametersFormGroup.get('derivativesField')?.value,
+    moneDerivados: this.parametersFormGroup.get('derivativesCurrencyField')?.value,
+    listGarantia: this.garanteeRowFormsGroup.map((formGroup: FormGroup) => {
+      return {
+        codGarantiaU: formGroup.get('codeField')?.value,
+        vrGarantiaU: formGroup.get('amountField')?.value,
+        moneVrGarantia: formGroup.get('currencyField')?.value,
+      };
+    }),
+  };
+
+  this.simulatorService.createSimulation(simulatorRequest).subscribe({
+    next: (element: SimulatorSimulatedCustomer) => {
+      // clonar grupos originales
+      const cloneGroups = JSON.parse(JSON.stringify(this.tableOriginalGroups));
+
+      // actualizar solo el cliente principal simulado
+      cloneGroups.forEach(group => {
+        group.data = group.data.map((item: TableData) => {
+          if (item.Penumdoc === this.dataRowId) {
+            item.Portfolio = element.cartera;
+            item.Derivatives = element.derivados;
+            item.NetExposure = element.exposicionNeta;
+            item.Guarantees = element.garantia;
+            item.TechnicalGuarantee = element.gtiaTecnica;
+            item.FinancialGuarantee = element.gtiaFinanciera;
+            item.Consumption = element.porcConsumo;
+            item.TotalExposure = element.totalExposicion;
+          }
+          return item;
+        });
+      });
+
+      this.tableNewGroups = cloneGroups;
+      this.switchDataSource(false);
+
+      swal(
+        'Simulación exitosa',
+        'La simulación de los datos del cliente ha sido exitosa.',
+        'success'
+      );
+    },
+    error: (error: any) => {
+      console.error('Error getting simulation data:', error);
+      this.isSimulationLoading = false;
+      this.isTableLoading = false;
+      this.isTableFailed = true;
+      this.tableStateLabel = 'Error al simular los datos del cliente.';
+      swal('Error al simular los datos del cliente', error, 'error');
+    },
+    complete: () => {
+      this.isSimulationLoading = false;
+      this.isTableLoading = false;
+      this.tableStateLabel = 'Listo.';
+    },
+  });
+}
+
+switchDataSource(toOriginal: boolean = true): void {
+  if (toOriginal) {
+    this.showOldData = true;
+    this.tableGroups = JSON.parse(JSON.stringify(this.tableOriginalGroups));
+    this.tableStateLabel = 'Datos originales.';
+  } else {
+    this.showOldData = false;
+    this.tableGroups = JSON.parse(JSON.stringify(this.tableNewGroups));
+    this.tableStateLabel = 'Datos simulados.';
+  }
+}
+
+
+this.tableOriginalGroups = JSON.parse(JSON.stringify(this.tableGroups));
+
+
+getSaveButtonEnabled(): boolean {
+  return this.tableGroups.length > 0;
+}
+
+
+
+<div class="row"
+     [@openClose]="tableGroups.length > 0 ? 'open' : 'closed'">
+
+  <div *ngFor="let group of tableGroups">
+    <h3>Grupo: {{ group.grupo }} - {{ group.nombre }}</h3>
+    <app-shared-table
+      [dataSource]="group.data"
+      [columnConfig]="columnConfig"
+      [enableSearch]="false"
+      [colmunId]="colmunId"
+      [stateLabel]="tableStateLabel"
+      [(dataRowId)]="dataRowId"
+      [isProcessing]="isTableLoading"
+      [isSelectable]="false"
+      [showTotals]="true"
+      [totalsColumnLabel]="'Customer'"
+      [isFailed]="isTableFailed"
+      [isDownloadable]="true"
+    ></app-shared-table>
+  </div>
+</div>
+
+
