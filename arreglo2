@@ -1,25 +1,33 @@
-export class SimulatorSimulatedCustomer {
-    public gccgroupid!: string;
-    /** Número de identificación */
-    public penumdoc!: string;
-    /** Nombre o Razón social  */
-    public penomper!: string;
-    /** Obliagciones de la cartera */
-    public cartera!: number;
-    /** Obligaiones de garantía financiera */
-    public gtiaTecnica!: number;
-    /** Obligaiones de garantía técnica */
-    public gtiaFinanciera!: number;
-    /** Olbigaciones de derivados */
-    public derivados!: number;
-    /** suma de los creditos agrupados por grupo/clientes */
-    public totalExposicion!: number;
-    /** Provisiones del grupo/cliente */
-    public provisiones!: number;
-    /** Garantías del grupo/cliente */
-    public garantia!: number;
-    /** Expsocion por grupo/cliente calculada */
-    public exposicionNeta!: number;
-    /** % que arroja el calculo final de la expsocion */
-    public porcConsumo!: number; 
-}
+next: (simulations: SimulatorSimulatedCustomer[]) => {
+  // clonar grupos originales
+  const cloneGroups: TableGroup[] = this.tableOriginalGroups.map(g => ({
+    grupo: g.grupo,
+    nombre: g.nombre,
+    data: g.data.map(item => ({ ...item })),
+  }));
+
+  simulations.forEach(element => {
+    // buscar grupo por gccgroupid
+    const group = cloneGroups.find(g => g.grupo === element.gccgroupid);
+    if (group && group.data.length > 0) {
+      // reemplazar solo la primera fila del grupo
+      group.data[0] = {
+        ...group.data[0],
+        Portfolio: element.cartera,
+        Derivatives: element.derivados,
+        NetExposure: element.exposicionNeta,
+        Guarantees: element.garantia,
+        TechnicalGuarantee: element.gtiaTecnica,
+        FinancialGuarantee: element.gtiaFinanciera,
+        Consumption: element.porcConsumo,
+        TotalExposure: element.totalExposicion,
+      };
+    }
+    // si no existe el grupo → se ignora
+  });
+
+  this.tableNewGroups = cloneGroups;
+  this.switchDataSource(false);
+
+  swal('Simulación exitosa', 'La simulación de los datos del cliente ha sido exitosa.', 'success');
+},
