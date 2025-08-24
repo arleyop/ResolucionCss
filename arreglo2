@@ -6,8 +6,18 @@ import {
   trigger,
 } from '@angular/animations';
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, AbstractControl, ValidatorFn, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ColumnConfig, SharedTableComponent } from '../../../features/shared/components/shared-table/shared-table.component';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormControl,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
+import {
+  ColumnConfig,
+  SharedTableComponent,
+} from '../../../features/shared/components/shared-table/shared-table.component';
 import { Garantee } from '../../../features/simulador/models/garantee';
 import { SimulatorCustomer } from '../../../features/simulador/models/simulator-customer';
 import { SimulatorRequest } from '../../../features/simulador/models/simulator-request.interface.';
@@ -19,8 +29,10 @@ import { Observable } from 'rxjs/internal/Observable';
 import { startWith } from 'rxjs/internal/operators/startWith';
 import { map } from 'rxjs/internal/operators/map';
 import swal from 'sweetalert2';
-import { groupBy, of } from 'rxjs';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
+import {
+  MatFormField,
+  MatLabel,
+} from '@angular/material/form-field';
 import { MatSelect } from '@angular/material/select';
 import { NgFor, NgIf, AsyncPipe, KeyValuePipe } from '@angular/common';
 import { MatOption } from '@angular/material/core';
@@ -28,7 +40,10 @@ import { MatInput } from '@angular/material/input';
 import { MatIconButton, MatButton } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { RequestButtonComponent } from '../../../features/shared/components/request-button/request-button.component';
-import { MatAutocompleteTrigger, MatAutocomplete } from '@angular/material/autocomplete';
+import {
+  MatAutocompleteTrigger,
+  MatAutocomplete,
+} from '@angular/material/autocomplete';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 
 /**
@@ -55,625 +70,427 @@ interface TableData {
   Type: 'P' | 'S' | 'T';
 }
 
-interface GaranteeRow {
-  type: string;
-  code: string;
-  standardization: string;
-  pdi: string;
-  currency: string;
-  amount: number;
-}
-
 interface FormGroupWithFilteredOptions extends FormGroup {
   filteredOptions: Observable<Garantee[]>;
 }
 
-/**
- *
- */
+type TableGroup = { grupo: string; nombre: string; data: TableData[] };
+
 @Component({
-    selector: 'app-simulador',
-    templateUrl: './simulador.component.html',
-    styleUrls: ['./simulador.component.css'],
-    animations: [
-        trigger('openClose', [
-            // ...
-            state('open', style({
-                height: '*',
-                opacity: 1,
-            })),
-            state('closed', style({
-                height: '0px',
-                opacity: 0,
-            })),
-            transition('open => closed', [animate('0.4s')]),
-            transition('closed => open', [animate('0.4s')]),
-        ]),
-    ],
-    standalone: true,
-    imports: [
-        FormsModule,
-        ReactiveFormsModule,
-        MatFormField,
-        MatLabel,
-        MatSelect,
-        NgFor,
-        MatOption,
-        MatInput,
-        MatIconButton,
-        MatIcon,
-        RequestButtonComponent,
-        NgIf,
-        MatAutocompleteTrigger,
-        MatAutocomplete,
-        MatButton,
-        MatSlideToggle,
-        SharedTableComponent,
-        AsyncPipe,
-        KeyValuePipe,
-    ],
+  selector: 'app-simulador',
+  templateUrl: './simulador.component.html',
+  styleUrls: ['./simulador.component.css'],
+  animations: [
+    trigger('openClose', [
+      state('open', style({ height: '*', opacity: 1 })),
+      state('closed', style({ height: '0px', opacity: 0 })),
+      transition('open => closed', [animate('0.4s')]),
+      transition('closed => open', [animate('0.4s')]),
+    ]),
+  ],
+  standalone: true,
+  imports: [
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormField,
+    MatLabel,
+    MatSelect,
+    NgFor,
+    MatOption,
+    MatInput,
+    MatIconButton,
+    MatIcon,
+    RequestButtonComponent,
+    NgIf,
+    MatAutocompleteTrigger,
+    MatAutocomplete,
+    MatButton,
+    MatSlideToggle,
+    SharedTableComponent,
+    AsyncPipe,
+    KeyValuePipe,
+  ],
 })
 export class SimuladorComponent {
-  // if the data is loading
-  isQueryLoading: boolean = false;
-  isTableLoading: boolean = false;
-  isTableFailed: boolean = false;
-  isSaveLoading: boolean = false;
-  isSimulationLoading: boolean = false;
-  // the table state label
-  tableStateLabel: string = 'Listo';
-  // Columna a usar como identificador
+  // estados
+  isQueryLoading = false;
+  isTableLoading = false;
+  isTableFailed = false;
+  isSaveLoading = false;
+  isSimulationLoading = false;
+  tableStateLabel = 'Listo';
+
+  // identificadores
   colmunId = 'Penumdoc';
   simulatorCustomer?: SimulatorCustomer;
-  // Selected row id
-  dataRowId: string = '';
-  // Configuración de cada columna
+  dataRowId = '';
+
+  // tabla
   columnConfig: ColumnConfig = {
     Customer: { header: 'Cliente', type: 'text', tooltip: 'Cliente' },
     Portfolio: { header: 'Cartera', type: 'currency', tooltip: 'Cartera' },
-    FinancialGuarantee: {
-      header: 'Garantía Financiera',
-      type: 'currency',
-      tooltip: 'Garantía financiera',
-    },
-    TechnicalGuarantee: {
-      header: 'Garantía Técnica',
-      type: 'currency',
-      tooltip: 'Garantía técnica',
-    },
-    Derivatives: {
-      header: 'Derivados',
-      type: 'currency',
-      tooltip: 'Derivados',
-    },
-    TotalExposure: {
-      header: 'Total Exposición',
-      type: 'currency',
-      tooltip: 'Total exposición',
-    },
-    Provisions: {
-      header: 'Provisiones',
-      type: 'currency',
-      tooltip: 'Provisiones',
-    },
+    FinancialGuarantee: { header: 'Garantía Financiera', type: 'currency', tooltip: 'Garantía financiera' },
+    TechnicalGuarantee: { header: 'Garantía Técnica', type: 'currency', tooltip: 'Garantía técnica' },
+    Derivatives: { header: 'Derivados', type: 'currency', tooltip: 'Derivados' },
+    TotalExposure: { header: 'Total Exposición', type: 'currency', tooltip: 'Total exposición' },
+    Provisions: { header: 'Provisiones', type: 'currency', tooltip: 'Provisiones' },
     Guarantees: { header: 'Garantías', type: 'currency', tooltip: 'Garantías' },
-    NetExposure: {
-      header: 'Exposición Neta',
-      type: 'currency',
-      tooltip: 'Exposición neta',
-    },
-    Consumption: {
-      header: 'Consumo PB',
-      type: 'currency',
-      tooltip: 'Consumo PB',
-    },
+    NetExposure: { header: 'Exposición Neta', type: 'currency', tooltip: 'Exposición neta' },
+    Consumption: { header: 'Consumo PB', type: 'currency', tooltip: 'Consumo PB' },
   };
-  // Controles del formulario
+
+  // formularios
   documentFormGroup!: FormGroup;
   parametersFormGroup!: FormGroup;
   garanteeRowFormsGroup: FormGroupWithFilteredOptions[] = [];
-  
-tableDataSource: TableData[] = [];
-  // Fuente de datos de la tabla
-  tableGroups: {grupo: string;nombre: string; data: TableData[]}[] =[];
-  tableOriginalGroups: { grupo: string; nombre: string; data: TableData[] }[] = [];
-  tableNewGroups: { grupo: string; nombre: string; data: TableData[] }[] = [];
-  showOldData: boolean = true;
-  // Fila seleccionada
-  rowSelected: TableData | null = null;
-  // Valor de búsqueda
-  searchValue: string = '';
-  // Tipo de documento
-  documentType: string = '';
-  // Opciones de tipos de documento para el combobox
-  documentTypeOptions: string[] = [];
-  // Número de documento
-  documentNumber: string = '';
-  // Opciones de tipo de moenda para el combobox
-  currencyTypeOptions: string[] = [];
-  //
-  garanteeOptions: Garantee[] = [];
-  //
-  filteredGaranteeOptions: Observable<Garantee[]>[] = [];
 
-  /**
-   * [ES] Constructor del componente
-   *
-   * [EN] Constructor of the component
-   *
-   * @param simulatorService
-   */
+  // grupos
+  tableGroups: TableGroup[] = [];
+  tableOriginalGroups: TableGroup[] = [];
+  tableNewGroups: TableGroup[] = [];
+  showOldData = true;
+
+  // combos
+  documentTypeOptions: string[] = [];
+  documentType = '';
+  documentNumber = '';
+  currencyTypeOptions: string[] = [];
+  garanteeOptions: Garantee[] = [];
+
   constructor(
     private simulatorService: SimulatorService,
     private formBuilder: FormBuilder
   ) {}
 
-  /**
-   * This method is called when the component is initialized
-   */
   ngOnInit() {
-    // Get the combo box data
     this.getDocumentTypeComboBoxData();
     this.getCurrencyTypeComboBoxData();
     this.getGaranteeOptions();
-    // Populate the form groups with empty values
+
     this.documentFormGroup = this.formBuilder.group({
-      docmentTypeField: [null, [Validators.required]], // Select input
-      documentNumberField: [
-        null,
-        [Validators.required, Validators.pattern('^[0-9]+$')],
-      ], // number input
+      docmentTypeField: [null, [Validators.required]],
+      documentNumberField: [null, [Validators.required, Validators.pattern('^[0-9]+$')]],
     });
+
     this.parametersFormGroup = this.formBuilder.group(
       {
-        portfolioField: [null, [Validators.pattern('^[0-9]+$')]], // number input
-        portfolioCurrencyField: [null], // Select input
-        financialGuaranteeField: [null, [Validators.pattern('^[0-9]+$')]], // number input
-        financialGuaranteeCurrencyField: [null], // Select input
-        technicalGuaranteeField: [null, [Validators.pattern('^[0-9]+$')]], // number input
-        technicalGuaranteeCurrencyField: [null], // Select input
-        derivativesField: [null, [Validators.pattern('^[0-9]+$')]], // number input
-        derivativesCurrencyField: [null], // Select input
-        committedLineField: [null, [Validators.pattern('^[0-9]+$')]], // number input
-        committedLineCurrencyField: [null], // Select input
+        portfolioField: [null, [Validators.pattern('^[0-9]+$')]],
+        portfolioCurrencyField: [null],
+        financialGuaranteeField: [null, [Validators.pattern('^[0-9]+$')]],
+        financialGuaranteeCurrencyField: [null],
+        technicalGuaranteeField: [null, [Validators.pattern('^[0-9]+$')]],
+        technicalGuaranteeCurrencyField: [null],
+        derivativesField: [null, [Validators.pattern('^[0-9]+$')]],
+        derivativesCurrencyField: [null],
+        committedLineField: [null, [Validators.pattern('^[0-9]+$')]],
+        committedLineCurrencyField: [null],
       },
       {
         validators: [
           currencyValueValidator('portfolioCurrencyField', 'portfolioField'),
-          currencyValueValidator(
-            'financialGuaranteeCurrencyField',
-            'financialGuaranteeField'
-          ),
-          currencyValueValidator(
-            'technicalGuaranteeCurrencyField',
-            'technicalGuaranteeField'
-          ),
-          currencyValueValidator(
-            'derivativesCurrencyField',
-            'derivativesField'
-          ),
-          currencyValueValidator(
-            'committedLineCurrencyField',
-            'committedLineField'
-          ),
+          currencyValueValidator('financialGuaranteeCurrencyField', 'financialGuaranteeField'),
+          currencyValueValidator('technicalGuaranteeCurrencyField', 'technicalGuaranteeField'),
+          currencyValueValidator('derivativesCurrencyField', 'derivativesField'),
+          currencyValueValidator('committedLineCurrencyField', 'committedLineField'),
         ],
       }
     );
   }
 
-  /**
-   * [EN] Gets the document types to feed the combobox
-   */
   getDocumentTypeComboBoxData(): void {
     this.isQueryLoading = true;
     this.simulatorService.getDocumentTypes().subscribe({
-      next: (data: string[]) => {
-        this.documentTypeOptions = data;
-      },
-      error: (error: any) => {
-        console.error('Error getting document types:', error);
-      },
-      complete: () => {
-        this.isQueryLoading = false;
-      },
+      next: (data: string[]) => (this.documentTypeOptions = data),
+      error: (error: any) => console.error('Error getting document types:', error),
+      complete: () => (this.isQueryLoading = false),
     });
   }
 
-  /**
-   * [EN] Gets the currency types to feed the combobox
-   */
   getCurrencyTypeComboBoxData(): void {
     this.isQueryLoading = true;
     this.simulatorService.getCurrencyTypes().subscribe({
-      next: (data: string[]) => {
-        this.currencyTypeOptions = data;
-      },
-      error: (error: any) => {
-        console.error('Error getting currency types:', error);
-      },
-      complete: () => {
-        this.isQueryLoading = false;
-      },
+      next: (data: string[]) => (this.currencyTypeOptions = data),
+      error: (error: any) => console.error('Error getting currency types:', error),
+      complete: () => (this.isQueryLoading = false),
     });
   }
 
   getGaranteeOptions(): void {
     this.isQueryLoading = true;
     this.simulatorService.getGarantees().subscribe({
-      next: (data: Garantee[]) => {
-        this.garanteeOptions = data;
-      },
-      error: (error: any) => {
-        console.error('Error getting garantee options:', error);
-      },
-      complete: () => {
-        this.isQueryLoading = false;
-      },
+      next: (data: Garantee[]) => (this.garanteeOptions = data),
+      error: (error: any) => console.error('Error getting garantee options:', error),
+      complete: () => (this.isQueryLoading = false),
     });
   }
 
-  /**
-   * [EN] Gest the custumer data
-   */
   getCustomerData(documentType: string, documentNumber: string): void {
     this.isQueryLoading = true;
     this.isTableLoading = true;
     this.tableStateLabel = 'Cargando...';
-    this.simulatorService
-      .getCustomerData(documentType, documentNumber)
-      .subscribe({
-        next: (data: SimulatorCustomer[]) => {
-          let dataSource: TableData[] = data.map((item: SimulatorCustomer) => {
-            let row: TableData = {
-              gccgroupid: item.gcc_group_tsi_id,
-              Penumdoc: item.penumdoc,
-              Petipdoc: item.petipdoc,
-              Penumper: item.penumper,
-              Customer: item.penomper,
-              Portfolio: item.cartera,
-              FinancialGuarantee: item.garantiaFinanciera,
-              TechnicalGuarantee: item.garantiaTecnica,
-              Derivatives: item.derivados,
-              TotalExposure: item.totalExposicion,
-              Provisions: item.provisiones,
-              Guarantees: item.garantias,
-              NetExposure: item.exposicionNeta,
-              Consumption: item.consumoPb,
-              GrupoNombre: item.grupo,
-              Type:
-                item.penumdoc == documentNumber && item.petipdoc == documentType
-                  ? 'P'
-                  : 'S',
-            };
-             if (item.penumdoc == documentNumber && item.petipdoc == documentType) {
+
+    this.simulatorService.getCustomerData(documentType, documentNumber).subscribe({
+      next: (data: SimulatorCustomer[]) => {
+        const dataSource: TableData[] = data.map(item => {
+          const row: TableData = {
+            gccgroupid: item.gcc_group_tsi_id,
+            Penumdoc: item.penumdoc,
+            Petipdoc: item.petipdoc,
+            Penumper: item.penumper,
+            Customer: item.penomper,
+            Portfolio: item.cartera,
+            FinancialGuarantee: item.garantiaFinanciera,
+            TechnicalGuarantee: item.garantiaTecnica,
+            Derivatives: item.derivados,
+            TotalExposure: item.totalExposicion,
+            Provisions: item.provisiones,
+            Guarantees: item.garantias,
+            NetExposure: item.exposicionNeta,
+            Consumption: item.consumoPb,
+            GrupoNombre: item.grupo,
+            Type: item.penumdoc == documentNumber && item.petipdoc == documentType ? 'P' : 'S',
+          };
+          if (item.penumdoc == documentNumber && item.petipdoc == documentType) {
             this.simulatorCustomer = item;
             this.dataRowId = documentNumber;
-            
           }
           return row;
-          });
+        });
 
-             // Agrupar por ID de grupo, pero guardando también el nombre
-        const grouped: {
-          [key: string]: { nombre: string; data: TableData[] };
-        } = {};
-
+        const grouped: { [key: string]: { nombre: string; data: TableData[] } } = {};
         dataSource.forEach(row => {
           if (!grouped[row.gccgroupid]) {
-            grouped[row.gccgroupid] = {
-              nombre: row.GrupoNombre, // usamos el nombre del grupo
-              data: [],
-            };
+            grouped[row.gccgroupid] = { nombre: row.GrupoNombre, data: [] };
           }
           grouped[row.gccgroupid].data.push(row);
         });
-        
-         // Convertir el objeto a un arreglo para *ngFor en la vista
+
         this.tableGroups = Object.keys(grouped).map(key => ({
-          grupo: key, // código del grupo
-          nombre: grouped[key].nombre, // nombre del grupo
+          grupo: key,
+          nombre: grouped[key].nombre,
           data: grouped[key].data,
         }));
 
-         console.log("data grupo table : ", this.tableGroups)
-         
-          this.tableOriginalGroups = this.tableGroups;
-          this.switchDataSource(true);
-        },
-        error: (error: any) => {
-          console.error('Error getting customer data:', error);
-          this.isQueryLoading = false;
-          this.isTableLoading = false;
-          this.isTableFailed = true;
-          this.tableStateLabel = 'Error al obtener los datos del cliente.';
-          swal('Error al obtener los datos del cliente', error, 'error');
-        },
-        complete: () => {
-          this.isQueryLoading = false;
-          this.isTableLoading = false;
-          this.tableStateLabel = 'Listo.';
-        },
-      });
+        this.tableOriginalGroups = this.tableGroups.map(g => ({
+          grupo: g.grupo,
+          nombre: g.nombre,
+          data: g.data.map(item => ({ ...item })),
+        }));
+
+        this.switchDataSource(true);
+      },
+      error: (error: any) => {
+        console.error('Error getting customer data:', error);
+        this.isQueryLoading = false;
+        this.isTableLoading = false;
+        this.isTableFailed = true;
+        this.tableStateLabel = 'Error al obtener los datos del cliente.';
+        swal('Error al obtener los datos del cliente', error, 'error');
+      },
+      complete: () => {
+        this.isQueryLoading = false;
+        this.isTableLoading = false;
+        this.tableStateLabel = 'Listo.';
+      },
+    });
   }
 
-  /**
-   * Retrun true if the query button is enabled, false otherwise
-   *
-   * @returns boolean true if the query button is enabled, false otherwise
-   */
   getQueryButtonEnabled(): boolean {
     return this.documentFormGroup.valid;
   }
 
-  /**
-   * Called when the query button is clicked
-   */
   onQueryButtonClicked(): void {
     if (!this.getQueryButtonEnabled()) return;
     this.documentType = this.documentFormGroup.get('docmentTypeField')?.value;
-    this.documentNumber = this.documentFormGroup.get(
-      'documentNumberField'
-    )?.value;
+    this.documentNumber = this.documentFormGroup.get('documentNumberField')?.value;
     this.getCustomerData(this.documentType, this.documentNumber);
   }
 
   displayFn(garantee: Garantee): string {
-    return garantee && garantee.descripcionGarantia
-      ? garantee.descripcionGarantia
-      : '';
+    return garantee?.descripcionGarantia || '';
   }
 
-  /**
-   * Retrun true if the simulate button is enabled, false otherwise
-   *
-   * @returns boolean: true if the form is valid
-   */
   getSimulateButtonEnabled(): boolean {
     return (
       this.parametersFormGroup.valid &&
-      this.garanteeRowFormsGroup.every((formGroup) => formGroup.valid) &&
+      this.garanteeRowFormsGroup.every(f => f.valid) &&
       this.garanteeRowFormsGroup.length <= 5
     );
   }
 
-  /**
-   * This method is called when the simulate button is clicked
-   */
- 
-onSimulateButtonClicked(): void {
-  this.isSimulationLoading = true;
-  this.isTableLoading = true;
-  this.isTableFailed = false;
-  this.tableStateLabel = 'Simulando.';
+  onSimulateButtonClicked(): void {
+    this.isSimulationLoading = true;
+    this.isTableLoading = true;
+    this.isTableFailed = false;
+    this.tableStateLabel = 'Simulando.';
 
-  const simulatorRequest: SimulatorRequest = {
-    penumdocU: this.documentNumber,
-    petipdocU: this.documentType,
-    carteraU: this.parametersFormGroup.get('portfolioField')?.value,
-    moneCartera: this.parametersFormGroup.get('portfolioCurrencyField')?.value,
-    gtiaFinancieraU: this.parametersFormGroup.get('financialGuaranteeField')?.value,
-    moneGtiaFinanciera: this.parametersFormGroup.get('financialGuaranteeCurrencyField')?.value,
-    gtiaTecnicaU: this.parametersFormGroup.get('technicalGuaranteeField')?.value,
-    moneGtiaTecnica: this.parametersFormGroup.get('technicalGuaranteeCurrencyField')?.value,
-    derivadosU: this.parametersFormGroup.get('derivativesField')?.value,
-    moneDerivados: this.parametersFormGroup.get('derivativesCurrencyField')?.value,
-    listGarantia: this.garanteeRowFormsGroup.map((formGroup: FormGroup) => {
-      return {
-        codGarantiaU: formGroup.get('codeField')?.value,
-        vrGarantiaU: formGroup.get('amountField')?.value,
-        moneVrGarantia: formGroup.get('currencyField')?.value,
-      };
-    }),
-  };
+    const simulatorRequest: SimulatorRequest = {
+      penumdocU: this.documentNumber,
+      petipdocU: this.documentType,
+      carteraU: this.parametersFormGroup.get('portfolioField')?.value,
+      moneCartera: this.parametersFormGroup.get('portfolioCurrencyField')?.value,
+      gtiaFinancieraU: this.parametersFormGroup.get('financialGuaranteeField')?.value,
+      moneGtiaFinanciera: this.parametersFormGroup.get('financialGuaranteeCurrencyField')?.value,
+      gtiaTecnicaU: this.parametersFormGroup.get('technicalGuaranteeField')?.value,
+      moneGtiaTecnica: this.parametersFormGroup.get('technicalGuaranteeCurrencyField')?.value,
+      derivadosU: this.parametersFormGroup.get('derivativesField')?.value,
+      moneDerivados: this.parametersFormGroup.get('derivativesCurrencyField')?.value,
+      listGarantia: this.garanteeRowFormsGroup.map(f => ({
+        codGarantiaU: f.get('codeField')?.value,
+        vrGarantiaU: f.get('amountField')?.value,
+        moneVrGarantia: f.get('currencyField')?.value,
+      })),
+    };
 
-  this.simulatorService.createSimulation(simulatorRequest).subscribe({
-    next: (element: SimulatorSimulatedCustomer) => {
-      // clonar grupos originales
-      const cloneGroups = JSON.parse(JSON.stringify(this.tableOriginalGroups));
+    this.simulatorService.createSimulation(simulatorRequest).subscribe({
+      next: (element: SimulatorSimulatedCustomer) => {
+        const cloneGroups: TableGroup[] = this.tableOriginalGroups.map(g => ({
+          grupo: g.grupo,
+          nombre: g.nombre,
+          data: g.data.map(item => ({ ...item })),
+        }));
 
-      // actualizar solo el cliente principal simulado
-      cloneGroups.forEach(group => {
-        group.data = group.data.map((item: TableData) => {
-          if (item.Penumdoc === this.dataRowId) {
-            item.Portfolio = element.cartera;
-            item.Derivatives = element.derivados;
-            item.NetExposure = element.exposicionNeta;
-            item.Guarantees = element.garantia;
-            item.TechnicalGuarantee = element.gtiaTecnica;
-            item.FinancialGuarantee = element.gtiaFinanciera;
-            item.Consumption = element.porcConsumo;
-            item.TotalExposure = element.totalExposicion;
-          }
-          return item;
+        cloneGroups.forEach((group: TableGroup) => {
+          group.data = group.data.map(item => {
+            if (item.Penumdoc === this.dataRowId) {
+              return {
+                ...item,
+                Portfolio: element.cartera,
+                Derivatives: element.derivados,
+                NetExposure: element.exposicionNeta,
+                Guarantees: element.garantia,
+                TechnicalGuarantee: element.gtiaTecnica,
+                FinancialGuarantee: element.gtiaFinanciera,
+                Consumption: element.porcConsumo,
+                TotalExposure: element.totalExposicion,
+              };
+            }
+            return item;
+          });
         });
-      });
 
-      this.tableNewGroups = cloneGroups;
-      this.switchDataSource(false);
+        this.tableNewGroups = cloneGroups;
+        this.switchDataSource(false);
+        swal('Simulación exitosa', 'La simulación de los datos del cliente ha sido exitosa.', 'success');
+      },
+      error: (error: any) => {
+        console.error('Error getting simulation data:', error);
+        this.isSimulationLoading = false;
+        this.isTableLoading = false;
+        this.isTableFailed = true;
+        this.tableStateLabel = 'Error al simular los datos del cliente.';
+        swal('Error al simular los datos del cliente', error, 'error');
+      },
+      complete: () => {
+        this.isSimulationLoading = false;
+        this.isTableLoading = false;
+        this.tableStateLabel = 'Listo.';
+      },
+    });
+  }
 
-      swal(
-        'Simulación exitosa',
-        'La simulación de los datos del cliente ha sido exitosa.',
-        'success'
-      );
-    },
-    error: (error: any) => {
-      console.error('Error getting simulation data:', error);
-      this.isSimulationLoading = false;
-      this.isTableLoading = false;
-      this.isTableFailed = true;
-      this.tableStateLabel = 'Error al simular los datos del cliente.';
-      swal('Error al simular los datos del cliente', error, 'error');
-    },
-    complete: () => {
-      this.isSimulationLoading = false;
-      this.isTableLoading = false;
-      this.tableStateLabel = 'Listo.';
-    },
-  });
-}
-
-  /**
-   * Retrun true if the save button is enabled, false otherwise
-   *
-   * @returns boolean: true if the form is valid
-   */
   getSaveButtonEnabled(): boolean {
-  return this.tableGroups.length > 0;
-}
+    return this.tableGroups.length > 0;
+  }
 
-
-  /**
-   * This method is called when the save button is clicked
-   */
   onSaveButtonClicked(): void {
     this.isSaveLoading = true;
-    var simulatorResult: SimulatorResult = {
+
+    const clientes = this.tableGroups.flatMap(g => g.data).map(item => ({
+      tipo: item.Type,
+      penumdoc: item.Penumdoc,
+      petipdocU: item.Petipdoc,
+      penomper: item.Customer,
+      cartera: item.Portfolio,
+      gtiaTecnica: item.TechnicalGuarantee,
+      gtiaFinanciera: item.FinancialGuarantee,
+      derivados: item.Derivatives,
+      totalExposicion: item.TotalExposure,
+      provisiones: item.Provisions,
+      garantia: item.Guarantees,
+      exposicionNeta: item.NetExposure,
+      porcConsumo: item.Consumption,
+    }));
+
+    const simulatorResult: SimulatorResult = {
       penumdoc: this.simulatorCustomer?.penumdoc || '',
       petipdocU: this.simulatorCustomer?.petipdoc || '',
       carteraU: this.simulatorCustomer?.cartera || 0,
-      moneCartera: this.parametersFormGroup.get('portfolioCurrencyField')
-        ?.value,
+      moneCartera: this.parametersFormGroup.get('portfolioCurrencyField')?.value,
       gtiaFinancieraU: this.simulatorCustomer?.garantiaFinanciera || 0,
-      moneGtiaFinanciera: this.parametersFormGroup.get(
-        'financialGuaranteeCurrencyField'
-      )?.value,
+      moneGtiaFinanciera: this.parametersFormGroup.get('financialGuaranteeCurrencyField')?.value,
       gtiaTecnicaU: this.simulatorCustomer?.garantiaTecnica || 0,
-      moneGtiaTecnica: this.parametersFormGroup.get(
-        'technicalGuaranteeCurrencyField'
-      )?.value,
+      moneGtiaTecnica: this.parametersFormGroup.get('technicalGuaranteeCurrencyField')?.value,
       derivadosU: this.simulatorCustomer?.derivados || 0,
-      moneDerivados: this.parametersFormGroup.get('derivativesCurrencyField')
-        ?.value,
-      listGarantia: this.garanteeRowFormsGroup.map((formGroup: FormGroup) => {
-        return {
-          codGarantiaU: formGroup.get('codeField')?.value,
-          vrGarantiaU: formGroup.get('amountField')?.value,
-          moneVrGarantia: formGroup.get('currencyField')?.value,
-        };
-      }),
-      clientes: this.tableDataSource.map((item: TableData) => {
-        return {
-          tipo: item.Type,
-          penumdoc: item.Penumdoc,
-          petipdocU: item.Petipdoc,
-          penomper: item.Customer,
-          cartera: item.Portfolio,
-          gtiaTecnica: item.TechnicalGuarantee,
-          gtiaFinanciera: item.FinancialGuarantee,
-          derivados: item.Derivatives,
-          totalExposicion: item.TotalExposure,
-          provisiones: item.Provisions,
-          garantia: item.Guarantees,
-          exposicionNeta: item.NetExposure,
-          porcConsumo: item.Consumption,
-        };
-      }),
+      moneDerivados: this.parametersFormGroup.get('derivativesCurrencyField')?.value,
+      listGarantia: this.garanteeRowFormsGroup.map(f => ({
+        codGarantiaU: f.get('codeField')?.value,
+        vrGarantiaU: f.get('amountField')?.value,
+        moneVrGarantia: f.get('currencyField')?.value,
+      })),
+      clientes,
     };
-    // the totals rows as another client element of type T
+
     simulatorResult.clientes.push({
       tipo: 'T',
       penumdoc: '',
       petipdocU: '',
       penomper: '',
-      cartera: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.cartera,
-        0
-      ),
-      gtiaTecnica: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.gtiaTecnica,
-        0
-      ),
-      gtiaFinanciera: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.gtiaFinanciera,
-        0
-      ),
-      derivados: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.derivados,
-        0
-      ),
-      totalExposicion: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.totalExposicion,
-        0
-      ),
-      provisiones: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.provisiones,
-        0
-      ),
-      garantia: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.garantia,
-        0
-      ),
-      exposicionNeta: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.exposicionNeta,
-        0
-      ),
-      porcConsumo: simulatorResult.clientes.reduce(
-        (acc, item) => acc + item.porcConsumo,
-        0
-      ),
+      cartera: clientes.reduce((acc, i) => acc + i.cartera, 0),
+      gtiaTecnica: clientes.reduce((acc, i) => acc + i.gtiaTecnica, 0),
+      gtiaFinanciera: clientes.reduce((acc, i) => acc + i.gtiaFinanciera, 0),
+      derivados: clientes.reduce((acc, i) => acc + i.derivados, 0),
+      totalExposicion: clientes.reduce((acc, i) => acc + i.totalExposicion, 0),
+      provisiones: clientes.reduce((acc, i) => acc + i.provisiones, 0),
+      garantia: clientes.reduce((acc, i) => acc + i.garantia, 0),
+      exposicionNeta: clientes.reduce((acc, i) => acc + i.exposicionNeta, 0),
+      porcConsumo: clientes.reduce((acc, i) => acc + i.porcConsumo, 0),
     });
+
     this.simulatorService.createSimulationResult(simulatorResult).subscribe({
-      next: () => {
-        swal(
-          'Datos de la simulación guardados',
-          'Los datos de la simulación han sido guardados correctamente.',
-          'success'
-        );
-      },
+      next: () => swal('Datos de la simulación guardados', 'Guardado correctamente.', 'success'),
       error: (error: any) => {
-        console.error('Error getting simulation result data:', error);
+        console.error('Error saving simulation result:', error);
         swal('Error al guardar los datos de la simulación', error, 'error');
         this.isSaveLoading = false;
       },
-      complete: () => {
-        this.isSaveLoading = false;
-      },
+      complete: () => (this.isSaveLoading = false),
     });
   }
 
-  /**
-   * Add a row of garantees related fiels
-   */
   addGaranteeRowForm(): void {
     const garanteeRowFormGroup: FormGroup = this.formBuilder.group({
-      //typeField: [''],
       codeField: ['', [Validators.required]],
       currencyField: [null, [Validators.required]],
       amountField: [null, [Validators.required]],
     });
     const control = this.formBuilder.control('');
     garanteeRowFormGroup.addControl('typeField', control);
-    // The filtered options will be the a observable that returns the garanteeOptions filtered by the value of the control when it changes
+
     const filteredOptions: Observable<Garantee[]> = control.valueChanges.pipe(
-      startWith(''), // Start with an empty string
+      startWith(''),
       map((value: string | null) => {
-        // if the value is a string, filter the options
         if (typeof value === 'string') {
           return this._filter(value || '');
-        }
-        // if the value is not a string, return the options
-        else {
+        } else {
           return this.garanteeOptions;
         }
       })
     );
-    let garanteeRowFormGroupWithFilteredOptions: FormGroupWithFilteredOptions =
-      <FormGroupWithFilteredOptions>garanteeRowFormGroup;
+
+    const garanteeRowFormGroupWithFilteredOptions =
+      garanteeRowFormGroup as FormGroupWithFilteredOptions;
     garanteeRowFormGroupWithFilteredOptions.filteredOptions = filteredOptions;
     this.garanteeRowFormsGroup.push(garanteeRowFormGroupWithFilteredOptions);
   }
 
   private _filter(value: string): Garantee[] {
     const filterValue = value.toLowerCase();
-    return this.garanteeOptions.filter((option) =>
+    return this.garanteeOptions.filter(option =>
       option.descripcionGarantia.toLowerCase().includes(filterValue)
     );
   }
 
-  /**
-   * Remove a row of garantees related fiels
-   */
   removeGaranteeRowForm(index: number): void {
     this.garanteeRowFormsGroup.splice(index, 1);
   }
@@ -683,15 +500,22 @@ onSimulateButtonClicked(): void {
   }
 
   switchDataSource(toOriginal: boolean = true): void {
-  if (toOriginal) {
-    this.showOldData = true;
-    this.tableGroups = JSON.parse(JSON.stringify(this.tableOriginalGroups));
-    this.tableStateLabel = 'Datos originales.';
-  } else {
-    this.showOldData = false;
-    this.tableGroups = JSON.parse(JSON.stringify(this.tableNewGroups));
-    this.tableStateLabel = 'Datos simulados.';
+    if (toOriginal) {
+      this.showOldData = true;
+      this.tableGroups = this.tableOriginalGroups.map(g => ({
+        grupo: g.grupo,
+        nombre: g.nombre,
+        data: g.data.map(item => ({ ...item })),
+      }));
+      this.tableStateLabel = 'Datos originales.';
+    } else {
+      this.showOldData = false;
+      this.tableGroups = this.tableNewGroups.map(g => ({
+        grupo: g.grupo,
+        nombre: g.nombre,
+        data: g.data.map(item => ({ ...item })),
+      }));
+      this.tableStateLabel = 'Datos simulados.';
+    }
   }
-}
-
 }
