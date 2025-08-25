@@ -1,11 +1,16 @@
-Quería realizarte una consulta, ya que acabo de reunirme con Yadira.
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-Actualmente tenemos dos versiones del formato de Derivados:
+@Injectable({
+  providedIn: 'root'
+})
+export class DerivadosService {
+  private apiUrl = 'http://localhost:8080/api/derivados'; // 🔥 cámbialo por tu URL real
 
-El que maneja Yadira y que se envía a Alfredo, pero no tenemos un correo donde se indique que ese será el formato oficial de recepción.
+  constructor(private http: HttpClient) {}
 
-El formato de derivados diarios que me llega a mí, pero tampoco contamos con una confirmación de que sea el correcto.
-
-Para evitar reprocesos, me gustaría confirmar cuál de los dos formatos debemos utilizar. El de Yadira corresponde a la carga del 31/05/2025.
-
-Te adjunto ambos formatos para tu validación.
+  guardarDerivados(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/guardar`, payload);
+  }
+}
