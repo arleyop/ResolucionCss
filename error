@@ -1,16 +1,140 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+.duplicado-row {
+  background-color: #ffe5b4 !important; /* naranja claro */
+}
 
-@Injectable({
-  providedIn: 'root'
-})
-export class DerivadosService {
-  private apiUrl = 'http://localhost:8080/api/derivados'; // 🔥 cámbialo por tu URL real
 
-  constructor(private http: HttpClient) {}
+<div class="table-responsive">
+  <table class="table table-bordered table-sm">
+    <thead class="table-light">
+      <tr>
+        <th>Tipo Identificación</th>
+        <th>Exposición</th>
+        <th>Fecha Operación</th>
+        <th>Fecha Carga</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let item of newFichaDerivado.relaciones"
+          [ngClass]="{'duplicado-row': item.duplicado}">
+        <td>{{ item.tipoIdentificacion }}</td>
+        <td>{{ item.exposicion }}</td>
+        <td>{{ item.fechaOperacion }}</td>
+        <td>{{ item.fechaCarga }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-  guardarDerivados(payload: any): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/guardar`, payload);
+<!-- Mensaje de advertencia visible si hay duplicados -->
+<div *ngIf="newFichaDerivado.relaciones.some(r => r.duplicado)" class="alert alert-warning mt-2">
+  ⚠ Algunos registros tienen duplicados (mismo Tipo Identificación y Fecha Operación).  
+  Al guardar, la exposición se sumará automáticamente.
+</div>
+
+
+
+
+
+
+
+
+processInformacionDerivados(workbook: XLSX.WorkBook, fileName: string) {
+  const sheetName = "informacion Derivados";
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    console.error(`No existe la hoja ${sheetName}`);
+    return;
   }
+
+  // 1. Extraer fecha desde nombre archivo → "PT fichero 20250821"
+  let fechaCarga: string | null = null;
+  const regexFecha = /(\d{8})$/;
+  const match = fileName.match(regexFecha);
+  if (match) {
+    const rawDate = match[1];
+    const year = rawDate.substring(0, 4);
+    const month = rawDate.substring(4, 6);
+    const day = rawDate.substring(6, 8);
+    fechaCarga = `${year}-${month}-${day}`;
+  }
+  this.newFichaDerivado.fechaCarga = fechaCarga;
+
+  // 2. Leer desde fila 3 (A3 en adelante)
+  const range = XLSX.utils.decode_range(sheet["!ref"]!);
+  range.s.r = 2; // fila 3 = índice 2
+  const data = XLSX.utils.sheet_to_json(sheet, {
+    range: range,
+    header: 1,
+    defval: ""
+  }) as any[][];
+
+  // 3. Mapear a objetos con tus campos específicos
+  let lista = data.map((row) => ({
+    tipoIdentificacion: (row[0] || "").toString().trim(),
+    exposicion: row[1] ? Number(row[1]) : 0,
+    fechaOperacion: row[2] || "",
+    fechaCarga: fechaCarga
+  }));
+
+  // 4. Filtrar N.A o vacíos
+  lista = lista.filter(item =>
+    item.tipoIdentificacion !== "" &&
+    item.tipoIdentificacion.toUpperCase() !== "N.A" &&
+    item.exposicion !== null &&
+    item.fechaOperacion !== "" &&
+    item.fechaOperacion.toUpperCase() !== "N.A"
+  );
+
+  // 5. Detectar duplicados por tipoIdentificacion + fechaOperacion
+  const duplicados: { [key: string]: number } = {};
+  lista.forEach(item => {
+    const key = `${item.tipoIdentificacion}_${item.fechaOperacion}`;
+    duplicados[key] = (duplicados[key] || 0) + 1;
+  });
+
+  // Marcar los duplicados
+  lista = lista.map(item => {
+    const key = `${item.tipoIdentificacion}_${item.fechaOperacion}`;
+    return {
+      ...item,
+      duplicado: duplicados[key] > 1 // true si está repetido
+    };
+  });
+
+  this.newFichaDerivado.relaciones = lista;
+  this.isLoadingFile = false;
+}
+
+storeNewFactSheet() {
+  if (this.newFichaDerivado.relaciones.length === 0) {
+    alert("No hay datos para guardar.");
+    return;
+  }
+
+  // Validar si hay duplicados
+  const hayDuplicados = this.newFichaDerivado.relaciones.some(r => r.duplicado);
+  if (hayDuplicados) {
+    alert("⚠ Existen registros duplicados. La exposición se sumará si el Tipo de Identificación y Fecha Operación son iguales.");
+  }
+
+  this.storeNewFactSheetIsLoading = true;
+  this.storeNewFactSheetDisabled = true;
+
+  this.derivadosService.guardarDerivados(this.newFichaDerivado).subscribe({
+    next: (resp) => {
+      console.log("Guardado con éxito:", resp);
+      alert("Datos guardados correctamente.");
+      this.reset();
+    },
+    error: (err) => {
+      console.error("Error al guardar:", err);
+      alert("Error al guardar en API.");
+      this.storeNewFactSheetIsLoading = false;
+      this.storeNewFactSheetDisabled = false;
+    },
+    complete: () => {
+      this.storeNewFactSheetIsLoading = false;
+      this.storeNewFactSheetDisabled = false;
+    }
+  });
 }
