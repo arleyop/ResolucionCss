@@ -1,16 +1,20 @@
+@Override
+	public List<Derivados> guardarDerivados(List<DerivadoRequestDTO> requests) {
+		// 1. Limpiar la tabla completa
+		derivadoRepository.deleteAll();
 
-@RestController
-@RequestMapping("/api/derivados")
-public class DerivadoController {
+		// 2. Mapear requests a entidades
+		List<Derivados> derivados = new ArrayList<>();
 
-    private final DerivadoService derivadoService;
+		for (DerivadoRequestDTO data : requests) {
+			Derivados derivado = new Derivados();
+			derivado.setMonto(BigDecimal.valueOf(data.getExposicion()));
+			derivado.setContrato(data.getIdentificacion());
+			derivado.setFecha_vcto(data.getFechaOperacion());
+			derivado.setFecPeriodo(data.getFechaOperacion());
+			derivados.add(derivado);
+		}
 
-    public DerivadoController(DerivadoService derivadoService) {
-        this.derivadoService = derivadoService;
-    }
-
-    @PostMapping("/guardar")
-    public ResponseEntity<List<Derivado>> guardarDerivados(@RequestBody List<DerivadoRequest> requests) {
-        List<Derivado> guardados = derivadoService.guardarDerivados(requests);
-        return ResponseEntity.ok(guardados);
-    }
+		// 3. Guardar nuevos
+		return derivadoRepository.saveAll(derivados);
+	}
