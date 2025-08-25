@@ -1,140 +1,104 @@
-.duplicado-row {
-  background-color: #ffe5b4 !important; /* naranja claro */
-}
+<div class="container py-5">
 
+  <h2 class="mb-4">Carga Derivados Manual</h2>
 
-<div class="table-responsive">
-  <table class="table table-bordered table-sm">
-    <thead class="table-light">
-      <tr>
-        <th>Tipo Identificación</th>
-        <th>Exposición</th>
-        <th>Fecha Operación</th>
-        <th>Fecha Carga</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let item of newFichaDerivado.relaciones"
-          [ngClass]="{'duplicado-row': item.duplicado}">
-        <td>{{ item.tipoIdentificacion }}</td>
-        <td>{{ item.exposicion }}</td>
-        <td>{{ item.fechaOperacion }}</td>
-        <td>{{ item.fechaCarga }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- Zona Drag & Drop -->
+  <div *ngIf="newFichaDerivado.relaciones.length === 0; else dataPreview"
+       class="drag-drop-area"
+       (drop)="onDrop($event)"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)">
+
+    <div class="file-upload text-center">
+      <input type="file"
+             (change)="onFileSelected($event)"
+             accept=".xlsx"
+             hidden
+             #fileInput>
+
+      <p class="mb-3">Selecciona un archivo Excel válido (.xlsx) de hasta 10MB</p>
+
+      <button mat-raised-button color="primary"
+              (click)="fileInput.click()"
+              [disabled]="isLoadingFile">
+        <mat-icon>upload</mat-icon> Seleccionar archivo
+      </button>
+
+      <div class="mt-2">
+        <small>o arrastra tu archivo aquí</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista previa -->
+  <ng-template #dataPreview>
+    <div class="my-4">
+      <h5>Datos cargados desde Excel</h5>
+      <p><strong>Fecha de carga:</strong> {{ newFichaDerivado.fechaCarga }}</p>
+
+      <!-- Tabla Angular Material -->
+      <div class="mat-elevation-z2">
+        <table mat-table [dataSource]="newFichaDerivado.relaciones" class="full-width-table">
+
+          <!-- Tipo Identificación -->
+          <ng-container matColumnDef="tipoIdentificacion">
+            <th mat-header-cell *matHeaderCellDef> Tipo Identificación </th>
+            <td mat-cell *matCellDef="let element"
+                [ngClass]="{'duplicado-row': element.duplicado}">
+              {{element.tipoIdentificacion}}
+            </td>
+          </ng-container>
+
+          <!-- Exposición -->
+          <ng-container matColumnDef="exposicion">
+            <th mat-header-cell *matHeaderCellDef> Exposición </th>
+            <td mat-cell *matCellDef="let element"
+                [ngClass]="{'duplicado-row': element.duplicado}">
+              {{element.exposicion}}
+            </td>
+          </ng-container>
+
+          <!-- Fecha Operación -->
+          <ng-container matColumnDef="fechaOperacion">
+            <th mat-header-cell *matHeaderCellDef> Fecha Operación </th>
+            <td mat-cell *matCellDef="let element"
+                [ngClass]="{'duplicado-row': element.duplicado}">
+              {{element.fechaOperacion}}
+            </td>
+          </ng-container>
+
+          <!-- Fecha Carga -->
+          <ng-container matColumnDef="fechaCarga">
+            <th mat-header-cell *matHeaderCellDef> Fecha Carga </th>
+            <td mat-cell *matCellDef="let element"
+                [ngClass]="{'duplicado-row': element.duplicado}">
+              {{element.fechaCarga}}
+            </td>
+          </ng-container>
+
+          <!-- Header y Rows -->
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              [ngClass]="{'duplicado-row': row.duplicado}">
+          </tr>
+        </table>
+      </div>
+
+      <!-- Botones -->
+      <div class="d-flex gap-3 mt-4">
+        <button mat-raised-button color="warn" (click)="reset()">
+          <mat-icon>cancel</mat-icon> Cancelar cambios
+        </button>
+
+        <button mat-raised-button color="accent"
+                (click)="storeNewFactSheet()"
+                [disabled]="storeNewFactSheetIsLoading">
+          <mat-icon>save</mat-icon>
+          Guardar Derivados
+        </button>
+      </div>
+    </div>
+  </ng-template>
+
 </div>
 
-<!-- Mensaje de advertencia visible si hay duplicados -->
-<div *ngIf="newFichaDerivado.relaciones.some(r => r.duplicado)" class="alert alert-warning mt-2">
-  ⚠ Algunos registros tienen duplicados (mismo Tipo Identificación y Fecha Operación).  
-  Al guardar, la exposición se sumará automáticamente.
-</div>
-
-
-
-
-
-
-
-
-processInformacionDerivados(workbook: XLSX.WorkBook, fileName: string) {
-  const sheetName = "informacion Derivados";
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) {
-    console.error(`No existe la hoja ${sheetName}`);
-    return;
-  }
-
-  // 1. Extraer fecha desde nombre archivo → "PT fichero 20250821"
-  let fechaCarga: string | null = null;
-  const regexFecha = /(\d{8})$/;
-  const match = fileName.match(regexFecha);
-  if (match) {
-    const rawDate = match[1];
-    const year = rawDate.substring(0, 4);
-    const month = rawDate.substring(4, 6);
-    const day = rawDate.substring(6, 8);
-    fechaCarga = `${year}-${month}-${day}`;
-  }
-  this.newFichaDerivado.fechaCarga = fechaCarga;
-
-  // 2. Leer desde fila 3 (A3 en adelante)
-  const range = XLSX.utils.decode_range(sheet["!ref"]!);
-  range.s.r = 2; // fila 3 = índice 2
-  const data = XLSX.utils.sheet_to_json(sheet, {
-    range: range,
-    header: 1,
-    defval: ""
-  }) as any[][];
-
-  // 3. Mapear a objetos con tus campos específicos
-  let lista = data.map((row) => ({
-    tipoIdentificacion: (row[0] || "").toString().trim(),
-    exposicion: row[1] ? Number(row[1]) : 0,
-    fechaOperacion: row[2] || "",
-    fechaCarga: fechaCarga
-  }));
-
-  // 4. Filtrar N.A o vacíos
-  lista = lista.filter(item =>
-    item.tipoIdentificacion !== "" &&
-    item.tipoIdentificacion.toUpperCase() !== "N.A" &&
-    item.exposicion !== null &&
-    item.fechaOperacion !== "" &&
-    item.fechaOperacion.toUpperCase() !== "N.A"
-  );
-
-  // 5. Detectar duplicados por tipoIdentificacion + fechaOperacion
-  const duplicados: { [key: string]: number } = {};
-  lista.forEach(item => {
-    const key = `${item.tipoIdentificacion}_${item.fechaOperacion}`;
-    duplicados[key] = (duplicados[key] || 0) + 1;
-  });
-
-  // Marcar los duplicados
-  lista = lista.map(item => {
-    const key = `${item.tipoIdentificacion}_${item.fechaOperacion}`;
-    return {
-      ...item,
-      duplicado: duplicados[key] > 1 // true si está repetido
-    };
-  });
-
-  this.newFichaDerivado.relaciones = lista;
-  this.isLoadingFile = false;
-}
-
-storeNewFactSheet() {
-  if (this.newFichaDerivado.relaciones.length === 0) {
-    alert("No hay datos para guardar.");
-    return;
-  }
-
-  // Validar si hay duplicados
-  const hayDuplicados = this.newFichaDerivado.relaciones.some(r => r.duplicado);
-  if (hayDuplicados) {
-    alert("⚠ Existen registros duplicados. La exposición se sumará si el Tipo de Identificación y Fecha Operación son iguales.");
-  }
-
-  this.storeNewFactSheetIsLoading = true;
-  this.storeNewFactSheetDisabled = true;
-
-  this.derivadosService.guardarDerivados(this.newFichaDerivado).subscribe({
-    next: (resp) => {
-      console.log("Guardado con éxito:", resp);
-      alert("Datos guardados correctamente.");
-      this.reset();
-    },
-    error: (err) => {
-      console.error("Error al guardar:", err);
-      alert("Error al guardar en API.");
-      this.storeNewFactSheetIsLoading = false;
-      this.storeNewFactSheetDisabled = false;
-    },
-    complete: () => {
-      this.storeNewFactSheetIsLoading = false;
-      this.storeNewFactSheetDisabled = false;
-    }
-  });
-}
