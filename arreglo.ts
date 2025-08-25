@@ -1,173 +1,140 @@
-import { Component } from '@angular/core';
-import * as XLSX from 'xlsx';
-import { DerivadosService } from './derivados.service';
+<div class="container py-5">
+  <h2>Carga Derivados Manual</h2>
 
-@Component({
-  selector: 'app-carga-derivados',
-  templateUrl: './carga-derivados.component.html',
-  styleUrls: ['./carga-derivados.component.css']
+  <!-- Zona Drag & Drop -->
+  <div *ngIf="newFichaDerivado.relaciones.length === 0; else dataPreview"
+       class="drag-drop-area"
+       (drop)="onDrop($event)"
+       (dragover)="onDragOver($event)"
+       (dragleave)="onDragLeave($event)">
+
+    <div class="file-upload pt-4 text-center">
+      <input type="file"
+             (change)="onFileSelected($event)"
+             accept=".xlsx"
+             hidden
+             #fileInput>
+      <p>Selecciona un archivo Excel válido (.xlsx) de hasta 10MB.</p>
+
+      <button mat-raised-button color="primary"
+              (click)="fileInput.click()"
+              [disabled]="disabled">
+        <mat-icon>upload</mat-icon>
+        Seleccionar archivo
+      </button>
+
+      <div>
+        <small>O arrastra tu archivo aquí</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview de datos -->
+  <ng-template #dataPreview>
+    <div class="my-4">
+      <h5>Datos cargados desde Excel</h5>
+      <p><strong>Fecha de carga:</strong> {{ newFichaDerivado.fechaCarga }}</p>
+
+      <!-- Tabla Angular Material -->
+      <table mat-table [dataSource]="newFichaDerivado.relaciones" class="mat-elevation-z8 full-width-table">
+
+        <!-- Tipo Identificación -->
+        <ng-container matColumnDef="tipoIdentificacion">
+          <th mat-header-cell *matHeaderCellDef> Tipo Identificación </th>
+          <td mat-cell *matCellDef="let element" [ngClass]="{'duplicado-cell': element.duplicado}">
+            {{element.tipoIdentificacion}}
+          </td>
+        </ng-container>
+
+        <!-- Exposición -->
+        <ng-container matColumnDef="exposicion">
+          <th mat-header-cell *matHeaderCellDef> Exposición </th>
+          <td mat-cell *matCellDef="let element" [ngClass]="{'duplicado-cell': element.duplicado}">
+            {{element.exposicion}}
+          </td>
+        </ng-container>
+
+        <!-- Fecha Operación -->
+        <ng-container matColumnDef="fechaOperacion">
+          <th mat-header-cell *matHeaderCellDef> Fecha Operación </th>
+          <td mat-cell *matCellDef="let element" [ngClass]="{'duplicado-cell': element.duplicado}">
+            {{element.fechaOperacion}}
+          </td>
+        </ng-container>
+
+        <!-- Fecha Carga -->
+        <ng-container matColumnDef="fechaCarga">
+          <th mat-header-cell *matHeaderCellDef> Fecha Carga </th>
+          <td mat-cell *matCellDef="let element">
+            {{element.fechaCarga}}
+          </td>
+        </ng-container>
+
+        <!-- Renderizado -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <!-- Advertencia si hay duplicados -->
+      <mat-card *ngIf="newFichaDerivado.relaciones.some(r => r.duplicado)"
+                class="mt-3 p-2 bg-warning text-dark">
+        ⚠ Algunos registros tienen duplicados (mismo Tipo Identificación y Fecha Operación).  
+        Al guardar, la exposición se sumará automáticamente.
+      </mat-card>
+
+      <!-- Botones -->
+      <div class="d-flex gap-3 mt-3">
+        <button mat-stroked-button color="warn" (click)="reset()">
+          <mat-icon>close</mat-icon> Cancelar cambios
+        </button>
+
+        <button mat-raised-button color="primary"
+                (click)="storeNewFactSheet()"
+                [disabled]="storeNewFactSheetDisabled">
+          <mat-icon>save</mat-icon> Guardar Derivados
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</div>
+
+
+
+// en tu módulo (ej: app.module.ts)
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
+@NgModule({
+  imports: [
+    ...,
+    MatTableModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule
+  ]
 })
-export class CargaDerivadosComponent {
-  isLoadingFile = false;
-  disabled = false;
+export class AppModule {}
+displayedColumns: string[] = [
+  'tipoIdentificacion',
+  'exposicion',
+  'fechaOperacion',
+  'fechaCarga'
+];
 
-  newFichaDerivado: any = {
-    fechaCarga: '',
-    relaciones: [] // Aquí irán los registros leídos del Excel
-  };
 
-  storeNewFactSheetIsLoading = false;
-  storeNewFactSheetDisabled = false;
 
-  constructor(private derivadosService: DerivadosService) {}
 
-  // ----------------------------
-  // Manejo de archivo
-  // ----------------------------
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
-    this.validateAndProcessFile(file);
-  }
 
-  onDrop(event: DragEvent) {
-    event.preventDefault();
-    this.removeDragOverClass();
-    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
-      const file = event.dataTransfer.files[0];
-      this.validateAndProcessFile(file);
-      event.dataTransfer.clearData();
-    }
-  }
-
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    this.addDragOverClass();
-  }
-
-  onDragLeave(event: DragEvent) {
-    this.removeDragOverClass();
-  }
-
-  addDragOverClass() {
-    const element = document.querySelector('.drag-drop-area');
-    if (element) {
-      element.classList.add('drag-over');
-    }
-  }
-
-  removeDragOverClass() {
-    const element = document.querySelector('.drag-drop-area');
-    if (element) {
-      element.classList.remove('drag-over');
-    }
-  }
-
-  // ----------------------------
-  // Procesar Excel
-  // ----------------------------
-  validateAndProcessFile(file: File | undefined) {
-    this.isLoadingFile = true;
-    if (
-      file &&
-      file.size <= 10 * 1024 * 1024 &&
-      file.type ===
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ) {
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        const binaryExcelFile = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(binaryExcelFile, { type: 'array' });
-
-        // Procesar hoja "informacion Derivados"
-        this.processInformacionDerivados(workbook, file.name);
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      this.isLoadingFile = false;
-      console.error("Archivo inválido.");
-    }
-  }
-
-  processInformacionDerivados(workbook: XLSX.WorkBook, fileName: string) {
-    const sheetName = "informacion Derivados";
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) {
-      console.error(`No existe la hoja ${sheetName}`);
-      return;
-    }
-
-    // 1. Extraer fecha desde nombre archivo → "PT fichero 20250821"
-    let fechaCarga: string | null = null;
-    const regexFecha = /(\d{8})$/;
-    const match = fileName.match(regexFecha);
-    if (match) {
-      const rawDate = match[1];
-      const year = rawDate.substring(0, 4);
-      const month = rawDate.substring(4, 6);
-      const day = rawDate.substring(6, 8);
-      fechaCarga = `${year}-${month}-${day}`;
-    }
-    this.newFichaDerivado.fechaCarga = fechaCarga;
-
-    // 2. Leer desde fila 3 (A3 en adelante)
-    const range = XLSX.utils.decode_range(sheet["!ref"]!);
-    range.s.r = 2; // fila 3 = índice 2
-    const data = XLSX.utils.sheet_to_json(sheet, {
-      range: range,
-      header: 1,
-      defval: ""
-    }) as any[][];
-
-    // 3. Mapear a objetos con tus campos específicos
-    const lista = data.map((row) => ({
-      tipoIdentificacion: row[0],  // Columna A
-      exposicion: row[1],          // Columna B
-      fechaOperacion: row[2],      // Columna C
-      fechaCarga: fechaCarga       // viene del nombre archivo
-    }));
-
-    this.newFichaDerivado.relaciones = lista;
-    this.isLoadingFile = false;
-  }
-
-  // ----------------------------
-  // Guardar en API
-  // ----------------------------
-  storeNewFactSheet() {
-    if (this.newFichaDerivado.relaciones.length === 0) {
-      alert("No hay datos para guardar.");
-      return;
-    }
-
-    this.storeNewFactSheetIsLoading = true;
-    this.storeNewFactSheetDisabled = true;
-
-    this.derivadosService.guardarDerivados(this.newFichaDerivado).subscribe({
-      next: (resp) => {
-        console.log("Guardado con éxito:", resp);
-        alert("Datos guardados correctamente.");
-        this.reset();
-      },
-      error: (err) => {
-        console.error("Error al guardar:", err);
-        alert("Error al guardar en API.");
-        this.storeNewFactSheetIsLoading = false;
-        this.storeNewFactSheetDisabled = false;
-      },
-      complete: () => {
-        this.storeNewFactSheetIsLoading = false;
-        this.storeNewFactSheetDisabled = false;
-      }
-    });
-  }
-
-  // ----------------------------
-  // Resetear
-  // ----------------------------
-  reset() {
-    this.newFichaDerivado = {
-      fechaCarga: '',
-      relaciones: []
-    };
-  }
+.full-width-table {
+  width: 100%;
 }
+
+.duplicado-cell {
+  background-color: #ffe0b2; /* naranja claro */
+}
+
+
