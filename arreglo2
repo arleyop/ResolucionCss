@@ -1,26 +1,45 @@
-    createSimulation(simulatorRequest: SimulatorRequest): Observable<SimulatorSimulatedCustomer[]> {
-        let url = `${this.endpoint}/ejecutar-simulador`;
-        let observable: Observable<any> = new Observable<any>(
-            (subscriber: Subscriber<any>) => {
-                this.http.post<JSend>(url, simulatorRequest).subscribe({
-                    next: (response: JSend) => {
-                        // Si el estado de la respuesta (JSend) es "success"
-                        if (response.status === 'success') {
-                            if (response.data.length === 0) {
-                                subscriber.error('No se encontraron datos de simulación');
-                            }
-                            let simulatorSimulatedCustomer: SimulatorSimulatedCustomer = response.data[0];
-                            subscriber.next(simulatorSimulatedCustomer);
-                        }
-                        // Si el estado de la respuesta (JSend) es "fail" o "error"
-                        else {
-                            subscriber.error(response.message);
-                        }
-                    },
-                    error: (error: any) => { subscriber.error(error.error.message) },
-                    complete: () => { subscriber.complete() }
-                });
+createSimulation(simulatorRequest: SimulatorRequest): Observable<SimulatorSimulatedCustomer[]> {
+  const url = `${this.endpoint}/ejecutar-simulador`;
+  return new Observable<SimulatorSimulatedCustomer[]>((subscriber) => {
+    this.http.post<JSend>(url, simulatorRequest).subscribe({
+      next: (response: JSend) => {
+        if (response.status === 'success') {
+          if (!response.data || response.data.length === 0) {
+            subscriber.error('No se encontraron datos de simulación');
+            return;
+          }
+
+          // Convertimos todo el arreglo a instancias de SimulatorSimulatedCustomer
+          const simulations: SimulatorSimulatedCustomer[] = response.data.map(
+            (item: any) => {
+              const sim = new SimulatorSimulatedCustomer();
+              sim.gccgroupid = item.gccgroupid;
+              sim.penumdoc = item.penumdoc;
+              sim.penomper = item.penomper;
+              sim.cartera = item.cartera;
+              sim.gtiaTecnica = item.gtiaTecnica;
+              sim.gtiaFinanciera = item.gtiaFinanciera;
+              sim.derivados = item.derivados;
+              sim.totalExposicion = item.totalExposicion;
+              sim.provisiones = item.provisiones;
+              sim.garantia = item.garantia;
+              sim.exposicionNeta = item.exposicionNeta;
+              sim.porcConsumo = item.porcConsumo;
+              return sim;
             }
-        );
-        return observable;
-    }
+          );
+
+          subscriber.next(simulations);
+        } else {
+          subscriber.error(response.message);
+        }
+      },
+      error: (error: any) => {
+        subscriber.error(error?.error?.message || 'Error en la simulación');
+      },
+      complete: () => {
+        subscriber.complete();
+      },
+    });
+  });
+}
