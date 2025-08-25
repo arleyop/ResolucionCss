@@ -1,45 +1,189 @@
-createSimulation(simulatorRequest: SimulatorRequest): Observable<SimulatorSimulatedCustomer[]> {
-  const url = `${this.endpoint}/ejecutar-simulador`;
-  return new Observable<SimulatorSimulatedCustomer[]>((subscriber) => {
-    this.http.post<JSend>(url, simulatorRequest).subscribe({
-      next: (response: JSend) => {
-        if (response.status === 'success') {
-          if (!response.data || response.data.length === 0) {
-            subscriber.error('No se encontraron datos de simulación');
-            return;
-          }
+    <div class="container">
+  <div class="row">
+    <div class="col-10 mx-auto">
+      <div class="container py-5">
+        <div class="row pb-2 align-items-center">
+          <div class="col">
+            <h2>Carga Derivados Manual</h2>
+          </div>
+        </div>
+        <ng-template #elseBlock>
+          <p>Carga tipo Excel, el cual contiene la información de Derivados:</p>
+        </ng-template>
+          
+        </div>
+        <!-- render the fact sheet upload form -->
+        <div *ngIf="oldFactSheet.idFichaTecnica===-1; else oldFactSheetLoaded" class="drag-drop-area" (drop)="onDrop($event)"
+          (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)">
+          <div class="file-upload pt-4">
+            <input type="file" (change)="onFileSelected($event)" accept=".xlsx" hidden #fileInput>
+            <div class="text-center">
+              <p>Por favor, selecciona un archivo Excel válido (.xlsx) de hasta 10MB.</p>
+            </div>
+            <app-request-button (click)="fileInput.click()" [isLoading]="isLoadingFile" [disabled]="disabled"
+              icon="upload-cloud">Seleccionar archivo</app-request-button>
+            <div class="text-center">
+              <small>Arrastra tu archivo aquí</small>
+            </div>
+          </div>
+        </div>
+        <!-- render the fact sheet info -->
+        <ng-template #oldFactSheetLoaded>
+          <div class="row">
+            <div class="col">
+              <app-fact-sheet-relationships [factSheet]="oldFactSheet" [new]="false">
+              </app-fact-sheet-relationships>
+            </div>
+            <div class="col">
+              <app-fact-sheet-relationships [factSheet]="newFactSheet" [new]="true">
+              </app-fact-sheet-relationships>
+            </div>
+          </div>
+          <div class="row my-4 justify-content-center">
+            <div class="col-auto">
+              <button type="button" color="primary" class="d-flex rounded-pill" mat-stroked-button (click)="reset()">
+                <mat-icon svgIcon="close"></mat-icon>
+                Cancelar cambios
+              </button>
+            </div>
+            <div class="col-auto">
+              <app-request-button (click)="storeNewFactSheet()" [isLoading]="storeNewFactSheetIsLoading"
+                [disabled]="storeNewFactSheetDisabled" icon="upload-cloud">
+                Guardar Derivados
+              </app-request-button>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
 
-          // Convertimos todo el arreglo a instancias de SimulatorSimulatedCustomer
-          const simulations: SimulatorSimulatedCustomer[] = response.data.map(
-            (item: any) => {
-              const sim = new SimulatorSimulatedCustomer();
-              sim.gccgroupid = item.gccgroupid;
-              sim.penumdoc = item.penumdoc;
-              sim.penomper = item.penomper;
-              sim.cartera = item.cartera;
-              sim.gtiaTecnica = item.gtiaTecnica;
-              sim.gtiaFinanciera = item.gtiaFinanciera;
-              sim.derivados = item.derivados;
-              sim.totalExposicion = item.totalExposicion;
-              sim.provisiones = item.provisiones;
-              sim.garantia = item.garantia;
-              sim.exposicionNeta = item.exposicionNeta;
-              sim.porcConsumo = item.porcConsumo;
-              return sim;
-            }
-          );
 
-          subscriber.next(simulations);
-        } else {
-          subscriber.error(response.message);
-        }
-      },
-      error: (error: any) => {
-        subscriber.error(error?.error?.message || 'Error en la simulación');
-      },
-      complete: () => {
-        subscriber.complete();
-      },
-    });
-  });
-}
+
+
+  // Manejo de selección de archivo
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    this.validateAndProcessFile(file);
+  }
+
+  // Manejo de arrastrar y soltar archivo
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.removeDragOverClass();
+    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      this.validateAndProcessFile(file);
+      event.dataTransfer.clearData();
+    }
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    this.addDragOverClass();
+  }
+
+  onDragLeave(event: DragEvent) {
+    this.removeDragOverClass();
+  }
+
+  addDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.add('drag-over');
+    }
+  }
+
+  removeDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.remove('drag-over');
+    }
+  }
+  /**
+   * Valida y procesa un archivo Excel.
+   * @param file - El archivo a validar y procesar.
+   */
+  validateAndProcessFile(file: File | undefined) {
+    this.isLoadingFile = true;
+    if (
+      file &&
+      file.size <= 10 * 1024 * 1024 &&
+      file.type ===
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ) {
+      if (file) {
+        const fileDate = new Date(file.lastModified);
+        this.fileLastModifiedDate = fileDate;
+      }
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.binaryExcelFile = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(this.binaryExcelFile, { type: 'array' });
+        //this.processResumenSheet(workbook);
+        //this.processFichaSheet(workbook);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+     
+    }
+  }
+
+  storeNewFactSheet() {
+      this.storeNewFactSheetIsLoading = true;
+      this.storeNewFactSheetFailed = false;
+      // validación de la ficha técnica
+      if (this.newFactSheet.relaciones.length === 0) {
+       // swal('Error', 'La ficha técnica no tiene relaciones.', 'error');
+        this.storeNewFactSheetIsLoading = false;
+        return;
+      }
+      if (this.newFactSheet.penumdoc === null || this.newFactSheet.penumdoc === '') {
+      //  swal('Error', 'El tipo de documento del cliente es requerido.', 'error');
+        this.storeNewFactSheetIsLoading = false;
+        return;
+      }
+      if (this.newFactSheet.petipdoc === null || this.newFactSheet.petipdoc === '') {
+        //swal('Error', 'El número de documento del cliente es requerido.', 'error');
+        this.storeNewFactSheetIsLoading = false;
+        return;
+      }
+      const now = new Date();
+       // Format as "YYYY-MM-DD HH:MM:SS.SSS" timestamp
+      const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+     
+    }
+  
+    /**
+     * Reset both old a new fact sheet data.
+     */
+    reset() {
+      this.oldFactSheet = {
+        penumdoc: '',
+        petipdoc: '',
+        idFichaTecnica: -1,
+        fechaCreacion: new Date(),
+        usuarioCreacion: '',
+        relaciones: [],
+      };
+      this.newFactSheet = {
+        penumdoc: '',
+        petipdoc: '',
+        idFichaTecnica: -1,
+        fechaCreacion: new Date(),
+        usuarioCreacion: '',
+        relaciones: [],
+      };
+      this.resumenData = [];
+      this.penomperDependencia = '';
+      this.petipdocDependencia = '';
+      this.penumdocDependencia = '';
+    }
+
+
+
+  isLoading = false;
+
+
+
+
