@@ -1,10 +1,9 @@
-package com.example.demo.service;
+public class DerivadoRequest {
 
-import com.example.demo.dto.DerivadoRequest;
-import com.example.demo.model.Derivado;
+    private String tipoIdentificacion;
+    private String numeroDocumento;
+    private Double exposicion;
+    private LocalDate fecha;
 
-import java.util.List;
-
-public interface DerivadoService {
-    List<Derivado> guardarDerivados(List<DerivadoRequest> requests);
+    // Getters y Setters
 }
