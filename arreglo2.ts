@@ -1,25 +1,16 @@
-.container {
-  max-width: 1000px;
-  margin: auto;
-}
 
-.drag-drop-area {
-  border: 2px dashed #90caf9;
-  border-radius: 8px;
-  padding: 40px;
-  text-align: center;
-  transition: background-color 0.3s;
-}
+@RestController
+@RequestMapping("/api/derivados")
+public class DerivadoController {
 
-.drag-drop-area.drag-over {
-  background-color: #e3f2fd;
-  border-color: #42a5f5;
-}
+    private final DerivadoService derivadoService;
 
-.full-width-table {
-  width: 100%;
-}
+    public DerivadoController(DerivadoService derivadoService) {
+        this.derivadoService = derivadoService;
+    }
 
-.duplicado-row {
-  background-color: #ffe0b2 !important; /* naranja claro */
-}
+    @PostMapping("/guardar")
+    public ResponseEntity<List<Derivado>> guardarDerivados(@RequestBody List<DerivadoRequest> requests) {
+        List<Derivado> guardados = derivadoService.guardarDerivados(requests);
+        return ResponseEntity.ok(guardados);
+    }
