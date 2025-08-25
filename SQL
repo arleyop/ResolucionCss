@@ -1,7 +1,56 @@
-#3f51b5 color boton  guadar 
+<!-- Botones -->
+<div class="buttons-right mt-4">
+  <button class="btn-cancelar" (click)="reset()">
+    <mat-icon>cancel</mat-icon> Cancelar cambios
+  </button>
 
-#EC0000 color boton 
+  <button class="btn-guardar"
+          (click)="storeNewFactSheet()"
+          [disabled]="storeNewFactSheetIsLoading">
+    <mat-icon>save</mat-icon>
+    Guardar Derivados
+  </button>
+</div>
 
-texto blanco 
 
-deben aparecen en la parte derecha de la pantalla
+.buttons-right {
+  display: flex;
+  justify-content: flex-end; /* alineados a la derecha */
+  gap: 15px;
+}
+
+.btn-guardar {
+  background-color: #3f51b5;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: 0.3s;
+}
+
+.btn-guardar:hover {
+  background-color: #303f9f; /* tono más oscuro */
+}
+
+.btn-cancelar {
+  background-color: #EC0000;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: 0.3s;
+}
+
+.btn-cancelar:hover {
+  background-color: #b20000; /* rojo más oscuro */
+}
