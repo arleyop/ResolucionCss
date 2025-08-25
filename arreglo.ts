@@ -1,95 +1,173 @@
-/**
- * [EN] Gets the customer data
- * [ES] Obtiene los datos del cliente
- */
-getCustomerData(documentType: string, documentNumber: string): void {
-  this.isQueryLoading = true;
-  this.isTableLoading = true;
-  this.tableStateLabel = 'Cargando.';
+import { Component } from '@angular/core';
+import * as XLSX from 'xlsx';
+import { DerivadosService } from './derivados.service';
 
-  this.simulatorService
-    .getCustomerData(documentType, documentNumber)
-    .subscribe({
-      next: (data: SimulatorCustomer[]) => {
-        // Transformamos cada registro en TableData
-        let dataSource: TableData[] = data.map((item: SimulatorCustomer) => {
-          let row: TableData = {
-            gccgroupid: item.gcc_group_tsi_id,
-            Penumdoc: item.penumdoc,
-            Petipdoc: item.petipdoc,
-            Penumper: item.penumper,
-            Customer: item.penomper,
-            Portfolio: item.cartera,
-            FinancialGuarantee: item.garantiaFinanciera,
-            TechnicalGuarantee: item.garantiaTecnica,
-            Derivatives: item.derivados,
-            TotalExposure: item.totalExposicion,
-            Provisions: item.provisiones,
-            Guarantees: item.garantias,
-            NetExposure: item.exposicionNeta,
-            Consumption: item.consumoPb,
-            GrupoNombre: item.grupo, // aquí ya tienes el nombre del grupo
-            Type:
-              item.penumdoc == documentNumber && item.petipdoc == documentType
-                ? 'P'
-                : 'S',
-          };
+@Component({
+  selector: 'app-carga-derivados',
+  templateUrl: './carga-derivados.component.html',
+  styleUrls: ['./carga-derivados.component.css']
+})
+export class CargaDerivadosComponent {
+  isLoadingFile = false;
+  disabled = false;
 
-          if (item.penumdoc == documentNumber && item.petipdoc == documentType) {
-            this.simulatorCustomer = item;
-            this.dataRowId = documentNumber;
-          }
+  newFichaDerivado: any = {
+    fechaCarga: '',
+    relaciones: [] // Aquí irán los registros leídos del Excel
+  };
 
-          return row;
-        });
+  storeNewFactSheetIsLoading = false;
+  storeNewFactSheetDisabled = false;
 
-        // Agrupar por ID de grupo, pero guardando también el nombre
-        const grouped: {
-          [key: string]: { nombre: string; data: TableData[] };
-        } = {};
+  constructor(private derivadosService: DerivadosService) {}
 
-        dataSource.forEach(row => {
-          if (!grouped[row.gccgroupid]) {
-            grouped[row.gccgroupid] = {
-              nombre: row.GrupoNombre, // usamos el nombre del grupo
-              data: [],
-            };
-          }
-          grouped[row.gccgroupid].data.push(row);
-        });
+  // ----------------------------
+  // Manejo de archivo
+  // ----------------------------
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    this.validateAndProcessFile(file);
+  }
 
-        // Convertir el objeto a un arreglo para *ngFor en la vista
-        this.tableGroups = Object.keys(grouped).map(key => ({
-          grupo: key, // código del grupo
-          nombre: grouped[key].nombre, // nombre del grupo
-          data: grouped[key].data,
-        }));
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.removeDragOverClass();
+    if (event.dataTransfer && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      this.validateAndProcessFile(file);
+      event.dataTransfer.clearData();
+    }
+  }
 
-        console.log('data grupo table : ', this.tableGroups);
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    this.addDragOverClass();
+  }
 
-        // Guardamos los datos originales para simulación
-        dataSource = dataSource.sort((a: TableData, b: TableData) => {
-          if (a.Penumdoc == documentNumber && a.Petipdoc == documentType) {
-            return -1;
-          } else {
-            return 1;
-          }
-        });
-        this.tableOriginalDataSource = dataSource;
-        this.switchDataSource(true);
+  onDragLeave(event: DragEvent) {
+    this.removeDragOverClass();
+  }
+
+  addDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.add('drag-over');
+    }
+  }
+
+  removeDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.remove('drag-over');
+    }
+  }
+
+  // ----------------------------
+  // Procesar Excel
+  // ----------------------------
+  validateAndProcessFile(file: File | undefined) {
+    this.isLoadingFile = true;
+    if (
+      file &&
+      file.size <= 10 * 1024 * 1024 &&
+      file.type ===
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ) {
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        const binaryExcelFile = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(binaryExcelFile, { type: 'array' });
+
+        // Procesar hoja "informacion Derivados"
+        this.processInformacionDerivados(workbook, file.name);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      this.isLoadingFile = false;
+      console.error("Archivo inválido.");
+    }
+  }
+
+  processInformacionDerivados(workbook: XLSX.WorkBook, fileName: string) {
+    const sheetName = "informacion Derivados";
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) {
+      console.error(`No existe la hoja ${sheetName}`);
+      return;
+    }
+
+    // 1. Extraer fecha desde nombre archivo → "PT fichero 20250821"
+    let fechaCarga: string | null = null;
+    const regexFecha = /(\d{8})$/;
+    const match = fileName.match(regexFecha);
+    if (match) {
+      const rawDate = match[1];
+      const year = rawDate.substring(0, 4);
+      const month = rawDate.substring(4, 6);
+      const day = rawDate.substring(6, 8);
+      fechaCarga = `${year}-${month}-${day}`;
+    }
+    this.newFichaDerivado.fechaCarga = fechaCarga;
+
+    // 2. Leer desde fila 3 (A3 en adelante)
+    const range = XLSX.utils.decode_range(sheet["!ref"]!);
+    range.s.r = 2; // fila 3 = índice 2
+    const data = XLSX.utils.sheet_to_json(sheet, {
+      range: range,
+      header: 1,
+      defval: ""
+    }) as any[][];
+
+    // 3. Mapear a objetos con tus campos específicos
+    const lista = data.map((row) => ({
+      tipoIdentificacion: row[0],  // Columna A
+      exposicion: row[1],          // Columna B
+      fechaOperacion: row[2],      // Columna C
+      fechaCarga: fechaCarga       // viene del nombre archivo
+    }));
+
+    this.newFichaDerivado.relaciones = lista;
+    this.isLoadingFile = false;
+  }
+
+  // ----------------------------
+  // Guardar en API
+  // ----------------------------
+  storeNewFactSheet() {
+    if (this.newFichaDerivado.relaciones.length === 0) {
+      alert("No hay datos para guardar.");
+      return;
+    }
+
+    this.storeNewFactSheetIsLoading = true;
+    this.storeNewFactSheetDisabled = true;
+
+    this.derivadosService.guardarDerivados(this.newFichaDerivado).subscribe({
+      next: (resp) => {
+        console.log("Guardado con éxito:", resp);
+        alert("Datos guardados correctamente.");
+        this.reset();
       },
-      error: (error: any) => {
-        console.error('Error getting customer data:', error);
-        this.isQueryLoading = false;
-        this.isTableLoading = false;
-        this.isTableFailed = true;
-        this.tableStateLabel = 'Error al obtener los datos del cliente.';
-        swal('Error al obtener los datos del cliente', error, 'error');
+      error: (err) => {
+        console.error("Error al guardar:", err);
+        alert("Error al guardar en API.");
+        this.storeNewFactSheetIsLoading = false;
+        this.storeNewFactSheetDisabled = false;
       },
       complete: () => {
-        this.isQueryLoading = false;
-        this.isTableLoading = false;
-        this.tableStateLabel = 'Listo.';
-      },
+        this.storeNewFactSheetIsLoading = false;
+        this.storeNewFactSheetDisabled = false;
+      }
     });
+  }
+
+  // ----------------------------
+  // Resetear
+  // ----------------------------
+  reset() {
+    this.newFichaDerivado = {
+      fechaCarga: '',
+      relaciones: []
+    };
+  }
 }
