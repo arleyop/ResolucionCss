@@ -1,166 +1,150 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ParametriaMoneda } from 'src/app/components/features/parametria/models/parametria-moneda.model';
-import { ParametriaMonedaService } from 'src/app/components/features/parametria/services/parametria-moneda.service';
-import { ColumnConfig } from 'src/app/components/features/shared/components/shared-table/shared-table.component';
-import swal from 'sweetalert2';
-import {
-  animate,
-  state,
-  style,
-  transition,
-  trigger,
-} from '@angular/animations';
-import { MatButton } from '@angular/material/button';
-import { MatIcon } from '@angular/material/icon';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
-import { RequestButtonComponent } from '../../../features/shared/components/request-button/request-button.component';
-import { SharedTableComponent } from '../../../features/shared/components/shared-table/shared-table.component';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import swal from 'sweetalert';
+import { ParametriaLimiteService } from 'src/app/services/parametria-limite.service';
+import { ParametriaPatrimonioService } from 'src/app/services/parametria-patrimonio.service';
+import { ParametriaLimite } from 'src/app/models/parametria-limite';
+import { ParametriaPatrimonio } from 'src/app/models/parametria-patrimonio';
 
-interface TableData {
-  Version: number | undefined;
-  Creacion: string | undefined;
-  Modificacion: string | undefined;
-  Usuario: string;
-  ModificadoPor: string;
-  Estado: boolean;
-}
-
-/**
- *
- * @author Fredy Rosero
- */
 @Component({
-    selector: 'app-moneda',
-    templateUrl: './moneda.component.html',
-    styleUrls: ['./moneda.component.css'],
-    animations: [
-        trigger('openClose', [
-            // ...
-            state('open', style({
-                height: '*',
-                opacity: 1,
-            })),
-            state('closed', style({
-                height: '0px',
-                opacity: 0,
-            })),
-            transition('open => closed', [animate('0.3s')]),
-            transition('closed => open', [animate('0.3s')]),
-        ]),
-    ],
-    standalone: true,
-    imports: [
-        FormsModule,
-        ReactiveFormsModule,
-        MatButton,
-        MatIcon,
-        MatFormField,
-        MatLabel,
-        MatInput,
-        RequestButtonComponent,
-        SharedTableComponent,
-    ],
+  selector: 'app-limite',
+  templateUrl: './limite.component.html',
+  styleUrls: ['./limite.component.scss']
 })
-export class MonedaComponent implements OnInit {
-  // Estado de la carga
-  isFormLoading: boolean = false;
-  isTableLoading: boolean = true;
-  isTableFailed: boolean = false;
-  tableStateLabel: string = 'Listo.';
-  // Controles del formulario
-  parametriaMonedaFormGroup!: FormGroup;
-  // Columna a usar como identificador
-  colmunId = 'Version';
-  // Configuración de cada columna
-  columnConfig: ColumnConfig = {
-    Version: { header: 'Versión', type: 'text' },
-    Creacion: { header: 'Fecha Creación', type: 'text' },
-    Modificacion: { header: 'Fecha Modificación', type: 'text' },
-    Usuario: { header: 'Usuario', type: 'text' },
-    ModificadoPor: { header: 'Modificado Por', type: 'text' },
-    Estado: {
-      header: 'Estado',
-      type: 'toggle',
-      handler: this.updateRowStatusParametriaMonedaById.bind(this),
-    },
-    Editar: {
-      header: 'Editar',
-      type: 'button',
-      handler: this.setParametriaMonedaFormGroupById.bind(this),
-      icon: 'edit',
-    },
-    Eliminar: {
-      header: 'Eliminar',
-      type: 'button',
-      handler: this.deleteRowParametriaMonedo.bind(this),
-      icon: 'delete',
-    },
-  };
-  // Fuente de datos de la tabla
-  tableDataSource: TableData[] = [];
-  // Fila seleccionada
-  rowSelected: TableData | null = null;
-  // Valor de búsqueda
-  searchValue: string = '';
+export class LimiteComponent implements OnInit {
+
+  // Formularios
+  parametriaLimiteFormGroup!: FormGroup;
+  parametriaPatrimonioFormGroup!: FormGroup;
+
+  // Estados
+  isFormLoading = false;
+  isTableLoading = false;
+  isTableFailed = false;
+  tableStateLabel = 'Listo.';
+
+  // Tablas
+  tableDataLimite: ParametriaLimite[] = [];
+  tableDataPatrimonio: ParametriaPatrimonio[] = [];
+  columnConfigLimite: any[] = [];
+  columnConfigPatrimonio: any[] = [];
+  colmunIdLimite = 'idLimite';
+  colmunIdPatrimonio = 'idPatrimonio';
+
+  searchValue = '';
 
   constructor(
     private formBuilder: FormBuilder,
-    private parametriaMonedaService: ParametriaMonedaService
+    private parametriaLimiteService: ParametriaLimiteService,
+    private parametriaPatriminioService: ParametriaPatrimonioService
   ) {}
 
-  ngOnInit() {
-    // Get the data from the service for the table
-    this.updateTableDataSource();
-    // TODO: validations
-    this.parametriaMonedaFormGroup = this.formBuilder.group({
-      idMoneda: [''],
-      pesosColombianos: [
-        '',
-        [Validators.required, Validators.pattern('^(?:[0-9]{0,1}[0-9]?|100)$')],
-      ],
-      usd: ['', [Validators.required, Validators.pattern('^(?:[0-9]{0,1}[0-9]?|100)$')]],
-      otrasMonedasExt: [
-        '',
-        [Validators.required, Validators.pattern('^(?:[0-9]{0,1}[0-9]?|100)$')],
-      ],
+  ngOnInit(): void {
+    // ====== LIMITE ======
+    this.parametriaLimiteFormGroup = this.formBuilder.group({
+      idLimite: [''],
+      limite: ['', [Validators.required, Validators.min(0)]],
+      fec_periodo: ['', [Validators.required]],
       estado: [true, [Validators.required]],
+    });
+
+    this.updateTableDataSourceLimite();
+
+    // ====== PATRIMONIO ======
+    this.parametriaPatrimonioFormGroup = this.formBuilder.group({
+      idPatrimonio: [''],
+      patrimonio: ['', [Validators.required, Validators.min(0)]],
+      fec_periodo: ['', [Validators.required]],
+      estado: [true, [Validators.required]],
+    });
+
+    this.updateTableDataSourcePatrimonio();
+  }
+
+  // ==========================================
+  // ============== LIMITE ====================
+  // ==========================================
+
+  setNewParametriaLimite(): void {
+    this.parametriaLimiteFormGroup.reset();
+    this.parametriaLimiteFormGroup.get('estado')?.setValue(true);
+    const newParam: ParametriaLimite = {
+      idLimite: -1,
+      limite: 0,
+      fec_periodo: '',
+      estado: 1,
+    };
+    this.parametriaLimiteFormGroup.patchValue(newParam);
+  }
+
+  getSaveButtonEnabledLimite(): boolean {
+    return this.parametriaLimiteFormGroup.valid;
+  }
+
+  onSaveButtonClickedLimite() {
+    if (!this.getSaveButtonEnabledLimite()) return;
+
+    const payload: ParametriaLimite = this.parametriaLimiteFormGroup.value;
+    if (payload.idLimite != null && payload.idLimite !== -1) {
+      this.updateFormParametriaLimite(payload);
+    } else {
+      this.createRowParametriaLimite(payload);
+    }
+  }
+
+  createRowParametriaLimite(param: ParametriaLimite) {
+    this.isFormLoading = true;
+    const toCreate = { ...param };
+    delete (toCreate as any).idLimite;
+    toCreate.estado = 1;
+
+    this.parametriaLimiteService.createParametriaLimite(toCreate).subscribe({
+      next: () => {
+        this.updateTableDataSourceLimite();
+        swal('Límite creado', 'El límite ha sido creado correctamente.', 'success');
+        this.setNewParametriaLimite();
+      },
+      error: (error) => {
+        swal('Error al crear el límite', error, 'error');
+        this.isFormLoading = false;
+      },
+      complete: () => {
+        this.isFormLoading = false;
+      },
     });
   }
 
-  /**
-   * This method is called when the data source changes
-   */
-  ngOnChanges() {
-    console.log('dataSource:', this.tableDataSource);
-  }
-
-  /**
-   * Update table data source
-   */
-  updateTableDataSource(): void {
-    this.isTableLoading = true;
-    this.parametriaMonedaService.getParametriaMonedas().subscribe({
-      next: (data: ParametriaMoneda[]) => {
-        // Map the data to the table data source
-        this.tableDataSource = data.map((item: ParametriaMoneda) => {
-          return {
-            Version: item.idMoneda,
-            Creacion: item.fechaCreacion,
-            Modificacion: item.fechaModificacion,
-            Usuario: item.nombreUsuario ?? '',
-            ModificadoPor: item.nombreUsuarioModificado ?? '',
-            Estado: item.estado === 1 ? true : false,
-          };
-        });
+  updateFormParametriaLimite(param: ParametriaLimite) {
+    this.isFormLoading = true;
+    this.parametriaLimiteService.updateParametriaLimite(param).subscribe({
+      next: () => {
+        this.updateTableDataSourceLimite();
+        swal('Límite actualizado', 'El límite ha sido actualizado correctamente.', 'success');
       },
       error: (error) => {
-        console.error(error);
-        swal('Error al cargar los datos', error, 'error');
+        swal('Error al actualizar el límite', error, 'error');
+        this.isFormLoading = false;
+      },
+      complete: () => {
+        this.isFormLoading = false;
+      },
+    });
+  }
+
+  deleteRowParametriaLimite(id: number) {
+    this.isTableLoading = true;
+    this.tableStateLabel = 'Eliminando...';
+    this.parametriaLimiteService.deleteParametriaLimite(id).subscribe({
+      next: () => {
+        swal('Límite eliminado', 'El límite ha sido eliminado', 'success');
+        this.updateTableDataSourceLimite();
+        this.setNewParametriaLimite();
+      },
+      error: (error) => {
+        swal('Error al eliminar el límite', error, 'error');
         this.isTableLoading = false;
         this.isTableFailed = true;
-        this.tableStateLabel = 'Error al cargar los datos.';
+        this.tableStateLabel = 'Error al eliminar límite.';
       },
       complete: () => {
         this.isTableLoading = false;
@@ -169,255 +153,127 @@ export class MonedaComponent implements OnInit {
     });
   }
 
-  /**
-   * Set the parametria exposición form by the status
-   */
-  setParametriaMonedaFormGroupByStatus(): void {
-    // Get the first item with 'Estado' as TRUE or 1
-    const foundItem = this.tableDataSource.find((item) => item.Estado);
-    // Asign the found item to the rowSelected
-    this.rowSelected = foundItem ? foundItem : null;
-    // Get the data of the selected itme
-    if (this.rowSelected && this.rowSelected.Version) {
-      this.setParametriaMonedaFormGroupById(this.rowSelected.Version);
-    }
+  updateTableDataSourceLimite() {
+    this.isTableLoading = true;
+    this.parametriaLimiteService.getParametriaLimites().subscribe({
+      next: (data) => {
+        this.tableDataLimite = data;
+      },
+      error: (error) => {
+        swal('Error al cargar límites', error, 'error');
+        this.isTableFailed = true;
+      },
+      complete: () => {
+        this.isTableLoading = false;
+      },
+    });
   }
 
-  /**
-   * Set a new empty parametriaExposicion for selection
-   */
-  setNewParametriaMoneda(): void {
-    this.parametriaMonedaFormGroup.reset();
-    this.parametriaMonedaFormGroup.get('estado')?.setValue(true);
-    let newParametriaMoneda: ParametriaMoneda = {
-      idMoneda: -1,
-      pesosColombianos: 0,
-      usd: 0,
-      otrasMonedasExt: 0,
+  // ==========================================
+  // ============ PATRIMONIO ==================
+  // ==========================================
+
+  setNewParametriaPatrimonio(): void {
+    this.parametriaPatrimonioFormGroup.reset();
+    this.parametriaPatrimonioFormGroup.get('estado')?.setValue(true);
+    const newParam: ParametriaPatrimonio = {
+      idPatrimonio: -1,
+      patrimonio: 0,
+      fec_periodo: '',
       estado: 1,
     };
-    this.parametriaMonedaFormGroup.patchValue(newParametriaMoneda);
-    // Focus on the first mat-form-field
-    const firstInput = document.querySelector(
-      'mat-form-field input'
-    ) as HTMLInputElement;
-    if (firstInput) {
-      firstInput.focus();
-    }
+    this.parametriaPatrimonioFormGroup.patchValue(newParam);
   }
 
-  /**
-   * Get the save button enabled
-   *
-   * @returns boolean: true if the form is valid
-   */
-  getSaveButtonEnabled(): boolean {
-    return this.parametriaMonedaFormGroup.valid;
+  getSaveButtonEnabledPatrimonio(): boolean {
+    return this.parametriaPatrimonioFormGroup.valid;
   }
 
-  /**
-   * This method is called when the save button is clicked
-   */
-  onSaveButtonClicked() {
-    // Verificar si el formulario es válido
-    if (!this.getSaveButtonEnabled()) {
-      return;
-    }
-    // Verificar si es un nuevo registro o se va a actualizar
-    if (this.parametriaMonedaFormGroup.value.idMoneda != -1) {
-      // Actualizar
-      this.updateFormParametriaMoneda(this.parametriaMonedaFormGroup.value);
+  onSaveButtonClickedPatrimonio() {
+    if (!this.getSaveButtonEnabledPatrimonio()) return;
+
+    const payload: ParametriaPatrimonio = this.parametriaPatrimonioFormGroup.value;
+    if (payload.idPatrimonio != null && payload.idPatrimonio !== -1) {
+      this.updateFormParametriaPatrimonio(payload);
     } else {
-      // Crear
-      this.createRowParametriaMoneda(this.parametriaMonedaFormGroup.value);
-    }
-    //this.CreateParametriaMoneda(this.formGroup.value);
-  }
-
-  /**
-   *  Save the selected parametria moneda
-   *
-   * @param parametriaMoneda
-   */
-  createRowParametriaMoneda(parametriaMoneda: ParametriaMoneda) {
-    this.isFormLoading = true;
-    // Remover `idMoneda`
-    delete parametriaMoneda.idMoneda;
-    // Agregar `estado` como true
-    parametriaMoneda.estado = 1;
-    this.parametriaMonedaService
-      .createParametriaMoneda(parametriaMoneda)
-      .subscribe({
-        next: (data: any) => {
-          this.isFormLoading = false;
-          console.log('ParametriaMoneda created:', data);
-          // Recargar la tabla
-          this.updateTableDataSource();
-          // Blanquear formulario
-          this.setNewParametriaMoneda();
-        },
-        error: (error) => {
-          swal('Error al crear la moneda', error, 'error');
-          this.isFormLoading = false;
-        },
-        complete: () => {
-          this.isFormLoading = false;
-        },
-      });
-  }
-
-  /**
-   * Set the parametria moneda by id
-   *
-   * @param id
-   */
-  setParametriaMonedaFormGroupById(id: number) {
-    this.isFormLoading = true;
-    const foundItem = this.tableDataSource.find((item) => item.Version === id);
-    this.rowSelected = foundItem ? foundItem : null;
-    this.parametriaMonedaService.getParametriaMonedaById(id).subscribe({
-        next: (data: ParametriaMoneda) => {
-          this.parametriaMonedaFormGroup.patchValue(data);
-        },
-        error: (error) => {
-          swal('Error al cargar la moneda', error, 'error');
-          this.isFormLoading = false;
-        },
-        complete: () => {
-          this.isFormLoading = false;
-        },
-      });
-  }
-
-  /**
-   * Update status of the selected parametria exposicion row of the table
-   *
-   * @param id
-   */
-  updateRowStatusParametriaMonedaById(id: number): void {
-    this.isTableLoading = true;
-    this.isTableFailed = false;
-    this.tableStateLabel = 'Actualizando...';
-    // get the item from the table data source
-    const foundItem = this.tableDataSource.find((item) => item.Version === id);
-    if (foundItem) {
-      // we need to persist the state which has been changed
-      const newStatus = foundItem?.Estado;
-      // Get the entity by id
-      this.parametriaMonedaService.getParametriaMonedaById(id).subscribe({
-          next: (parametriaExposicion: ParametriaMoneda) => {
-            // change the status from the entity
-            parametriaExposicion.estado = newStatus ? 1 : 0;
-            // update the entity
-            this.parametriaMonedaService
-              .updateParametriaMonedaEstado(parametriaExposicion)
-              .subscribe({
-                next: () => {
-                  swal(
-                    'Moneda actualizada',
-                    `La moneda ha sido ${
-                      newStatus ? 'activada' : 'desactivada'
-                    }`,
-                    'success'
-                  );
-                  // Refresh the table
-                  this.updateTableDataSource();
-                },
-                error: (error) => {
-                  swal(
-                    'Error al actualizar la moneda',
-                    error,
-                    'error'
-                  );
-                  this.tableStateLabel = error;
-                  this.isTableLoading = false;
-                  this.isTableFailed = true;
-                  foundItem.Estado = !newStatus; // rollback
-                },
-                complete: () => {
-                  this.isTableLoading = false;
-                  this.tableStateLabel = 'Listo.';
-                },
-              });
-          },
-          error: (error) => {
-            swal('Error al cargar la moneda', error, 'error');
-            this.isTableLoading = false;
-          },
-          complete: () => {
-            this.isTableLoading = false;
-          },
-        });
-    } else {
-      swal(
-        'Error al actualizar el estado de la moneda',
-        `No exsite una fila con el id "${id}"`,
-        'error'
-      );
-      this.isTableLoading = false;
+      this.createRowParametriaPatrimonio(payload);
     }
   }
 
-  /**
-   * Update the selected parametria moneda
-   *
-   * @param parametriaMoneda
-   */
-  updateFormParametriaMoneda(parametriaMoneda: ParametriaMoneda) {
+  createRowParametriaPatrimonio(param: ParametriaPatrimonio) {
     this.isFormLoading = true;
-    this.parametriaMonedaService
-      .updateParametriaMoneda(parametriaMoneda)
-      .subscribe({
-        next: () => {
-          this.updateTableDataSource();
-          swal(
-            'Moneda actualizada',
-            'La moneda ha sido actualizada',
-            'success'
-          );
-        },
-        error: (error) => {
-          swal('Error al actualizar la moneda', error, 'error');
-          this.isFormLoading = false;
-        },
-        complete: () => {
-          this.isFormLoading = false;
-        }
-      });
+    const toCreate = { ...param };
+    delete (toCreate as any).idPatrimonio;
+    toCreate.estado = 1;
+
+    this.parametriaPatriminioService.createParametriaPatrimonio(toCreate).subscribe({
+      next: () => {
+        this.updateTableDataSourcePatrimonio();
+        swal('Patrimonio creado', 'El patrimonio ha sido creado correctamente.', 'success');
+        this.setNewParametriaPatrimonio();
+      },
+      error: (error) => {
+        swal('Error al crear el patrimonio', error, 'error');
+        this.isFormLoading = false;
+      },
+      complete: () => {
+        this.isFormLoading = false;
+      },
+    });
   }
 
-  /**
-   * Delete the selected parametria exposicion
-   *
-   * @param id
-   */
-  deleteRowParametriaMonedo(id: number) {
+  updateFormParametriaPatrimonio(param: ParametriaPatrimonio) {
+    this.isFormLoading = true;
+    this.parametriaPatriminioService.updateParametriaPatrimonio(param).subscribe({
+      next: () => {
+        this.updateTableDataSourcePatrimonio();
+        swal('Patrimonio actualizado', 'El patrimonio ha sido actualizado correctamente.', 'success');
+      },
+      error: (error) => {
+        swal('Error al actualizar el patrimonio', error, 'error');
+        this.isFormLoading = false;
+      },
+      complete: () => {
+        this.isFormLoading = false;
+      },
+    });
+  }
+
+  deleteRowParametriaPatrimonio(id: number) {
     this.isTableLoading = true;
-    this.isTableFailed = false;
     this.tableStateLabel = 'Eliminando...';
-    this.parametriaMonedaService
-      .deleteParametriaMoneda(id)
-      .subscribe({
-        next: () => {
-          swal(
-            'Moneda eliminda',
-            'La moneda ha sido eliminada',
-            'success')
-          // Actualizar tabla
-          this.updateTableDataSource();
-          // Blanqueara formulario
-          this.setNewParametriaMoneda();
-        },
-        error: (error) => {
-          swal('Error al eliminar la moneda', error, 'error');
-          this.isTableLoading = false;
-          this.isTableFailed = true;
-          this.tableStateLabel = "Error al eliminar la moneda.";
-        },
-        complete: () => {
-          this.isTableLoading = false;
-          this.tableStateLabel = 'Listo.';
-        },
-      });
+    this.parametriaPatriminioService.deleteParametriaPatrimonio(id).subscribe({
+      next: () => {
+        swal('Patrimonio eliminado', 'El patrimonio ha sido eliminado', 'success');
+        this.updateTableDataSourcePatrimonio();
+        this.setNewParametriaPatrimonio();
+      },
+      error: (error) => {
+        swal('Error al eliminar el patrimonio', error, 'error');
+        this.isTableLoading = false;
+        this.isTableFailed = true;
+        this.tableStateLabel = 'Error al eliminar patrimonio.';
+      },
+      complete: () => {
+        this.isTableLoading = false;
+        this.tableStateLabel = 'Listo.';
+      },
+    });
+  }
+
+  updateTableDataSourcePatrimonio() {
+    this.isTableLoading = true;
+    this.parametriaPatriminioService.getParametriaPatrimonios().subscribe({
+      next: (data) => {
+        this.tableDataPatrimonio = data;
+      },
+      error: (error) => {
+        swal('Error al cargar patrimonio', error, 'error');
+        this.isTableFailed = true;
+      },
+      complete: () => {
+        this.isTableLoading = false;
+      },
+    });
   }
 }
