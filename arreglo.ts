@@ -1,1 +1,5 @@
-delete from DEHTGEMO.derivados where contrato=:1 and fec_periodo=:2 , Original SQL = delete from DEHTGEMO.derivados where contrato=? and fec_periodo=?, Error Message = ORA-02292: restricción de integridad (DEHTGEMO.FK645CAIC9M45LTTR80AUADEVDE) violada - registro secundario encontrado
+@OneToMany(mappedBy = "derivados", cascade = CascadeType.ALL, orphanRemoval = true)
+private Set<ReClientesObligacion> reClienteObligacion;
+
+@OneToMany(mappedBy = "derivados", cascade = CascadeType.ALL, orphanRemoval = true)
+private Set<RePrestamosGarantias> prestamosGarantias;
