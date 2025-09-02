@@ -1,92 +1,118 @@
-onSimulateButtonClicked(): void {
-  this.isSimulationLoading = true;
-  this.isTableLoading = true;
-  this.isTableFailed = false;
-  this.tableStateLabel = 'Simulando.';
-
-  const carteraValue = this.parametersFormGroup.get('portfolioField')?.value;
-  const carteraCurrency = this.parametersFormGroup.get('portfolioCurrencyField')?.value;
-
-  const gtiaFinancieraValue = this.parametersFormGroup.get('financialGuaranteeField')?.value;
-  const gtiaFinancieraCurrency = this.parametersFormGroup.get('financialGuaranteeCurrencyField')?.value;
-
-  const gtiaTecnicaValue = this.parametersFormGroup.get('technicalGuaranteeField')?.value;
-  const gtiaTecnicaCurrency = this.parametersFormGroup.get('technicalGuaranteeCurrencyField')?.value;
-
-  const derivadosValue = this.parametersFormGroup.get('derivativesField')?.value;
-  const derivadosCurrency = this.parametersFormGroup.get('derivativesCurrencyField')?.value;
-
-  const simulatorRequest: SimulatorRequest = {
-    penumdocU: this.documentNumber,
-    petipdocU: this.documentType,
-
-    carteraU: this.transformToPesos(carteraValue, carteraCurrency),
-    moneCartera: carteraCurrency?.cdDiviss,
-
-    gtiaFinancieraU: this.transformToPesos(gtiaFinancieraValue, gtiaFinancieraCurrency),
-    moneGtiaFinanciera: gtiaFinancieraCurrency?.cdDiviss,
-
-    gtiaTecnicaU: this.transformToPesos(gtiaTecnicaValue, gtiaTecnicaCurrency),
-    moneGtiaTecnica: gtiaTecnicaCurrency?.cdDiviss,
-
-    derivadosU: this.transformToPesos(derivadosValue, derivadosCurrency),
-    moneDerivados: derivadosCurrency?.cdDiviss,
-
-    listGarantia: this.garanteeRowFormsGroup.map(f => ({
-      codGarantiaU: f.get('codeField')?.value,
-      vrGarantiaU: this.transformToPesos(f.get('amountField')?.value, f.get('currencyField')?.value),
-      moneVrGarantia: f.get('currencyField')?.value?.cdDiviss,
-    })),
-  };
-
-  this.simulatorService.createSimulation(simulatorRequest).subscribe({
-    next: (simulations: SimulatorSimulatedCustomer[]) => {
-      const cloneGroups: TableGroup[] = this.tableOriginalGroups.map(g => ({
-        grupo: g.grupo,
-        nombre: g.nombre,
-        data: g.data.map(item => ({ ...item })),
-      }));
-
-      simulations.forEach(element => {
-        const group = cloneGroups.find(g => g.grupo === element.gccgroupid);
-        if (group && group.data.length > 0) {
-          group.data[0] = {
-            ...group.data[0],
-            Portfolio: element.cartera,
-            Derivatives: element.derivados,
-            NetExposure: element.exposicionNeta,
-            Guarantees: element.garantia,
-            TechnicalGuarantee: element.gtiaTecnica,
-            FinancialGuarantee: element.gtiaFinanciera,
-            Consumption: element.porcConsumo,
-            TotalExposure: element.totalExposicion,
-          };
-        }
-      });
-
-      this.tableNewGroups = cloneGroups;
-      this.switchDataSource(false);
-
-      swal('Simulación exitosa', 'La simulación de los datos del cliente ha sido exitosa.', 'success');
-    },
-    error: (error: any) => {
-      console.error('Error getting simulation data:', error);
-      this.isSimulationLoading = false;
-      this.isTableLoading = false;
-      this.isTableFailed = true;
-      this.tableStateLabel = 'Error al simular los datos del cliente.';
-      swal('Error al simular los datos del cliente', error, 'error');
-    },
-    complete: () => {
-      this.isSimulationLoading = false;
-      this.isTableLoading = false;
-      this.tableStateLabel = 'Listo.';
-    },
-  });
-}
-
-
-private transformToPesos(value: number, currency: any): number {
-  if (!value || !currency) return value;
-  return value * currency.cambFix; // Se multiplica para llevar a pesos
-}
+00583285697	21736681540.19
+08300107380	6907659.19
+09011458085	0
+08300313094	261730983.76
+08300801501	0
+08605186731	0
+08600007538	0
+09003660701	0
+09000346168	959368035.37
+08600493132	0
+08600000064	546202412.11
+08301157709	0
+08600035639	19816523418.17
+08190039625	0
+08605158021	0
+08909266501	958143254.83
+09004662097	4976182515.05
+08000559905	0
+09003284132	0
+08001304263	0
+08909006089	1714591107.82
+08300742227	24091273406.77
+08901121791	0
+09012883515	0
+08903002794	0
+08301063691	0
+08909304485	0
+09002655841	0
+08002190598	0
+08001410211	0
+08300834151	0
+08605090229	0
+09003352790	1801910496.65
+08909086497	0
+09003272909	25256645288.68
+09003970578	0
+09001235043	1215342466.98
+09004611064	0
+09013083901	0
+08160011827	0
+08600061608	183751733.37
+09012301200	0
+08909039388	0
+08190072017	3002210835.64
+08600021821	11857220069.75
+09000953838	0
+08001974634	936577082.93
+09002178637	0
+08903014638	0
+08902096126	0
+09001769050	0
+08300356501	0
+09013395052	812316625.72
+09003240550	0
+08903002257	0
+08010026448	0
+09000917097	0
+08600052167	0
+09003538732	0
+08002496785	21320771.88
+08000207069	0
+08300043201	0
+09002053777	2807656385.51
+08909000438	0
+08600019428	0
+08600137201	0
+08001822815	0
+08600417920	0
+08605357068	0
+09004095873	2081940822.4
+09001883963	0
+09003655604	0
+08301225661	8691690864.99
+09008541561	0
+09002425186	125162456.48
+08000489431	0
+08909030241	0
+09003680764	0
+09001761711	0
+08909001619	0
+08600030201	0
+09013264818	1002503340.12
+09004119990	2111791425.09
+08002487012	0
+09005308992	0
+09002962714	204956221.15
+08002530552	26991814087.89
+08300891145	0
+09006142433	0
+08000960409	0
+08913015496	890031971.74
+09014897345	0
+09000174478	0
+08300085245	0
+08300558977	0
+09012610480	762937060.88
+09002111671	50276894.81
+08001917008	1229832012.79
+08600038318	0
+08600157533	1464778660.29
+09016098980	0
+09013525721	1238495317.28
+08600299951	0
+08919033336	0
+09013878599	0
+09002911863	0
+08909165754	643111142.94
+08300549046	0
+09015287311	0
+08060050085	3435140090.34
+09003461363	0
+08605220562	96866014.56
+08002164991	1505669284.46
+09011645454	4759382345.75
+09016581072	1093381954.55
+09000874144	0
+08300442662	0
+09016462348	71991829.64
