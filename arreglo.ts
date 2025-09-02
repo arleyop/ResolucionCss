@@ -21,3 +21,17 @@ export class TasaCambioService {
     return this.http.get<{ status: string, data: GemTasaCambio[] }>(`${this.apiUrl}/tipos-moneda`);
   }
 }
+
+
+
+currencyTypeOptions: GemTasaCambio[] = [];
+
+getcurrencyTypeCombonBoxData(): void {
+  this.tasaCambioService.getcurrencyTypeCombonBoxData().subscribe({
+    next: (response) => {
+      if (response.status === 'SUCCESS' && response.data) {
+        this.currencyTypeOptions = response.data;
+        console.table(this.currencyTypeOptions); // 👀 mejor vista en consola tipo tabla
+      }
+    }
+  });
