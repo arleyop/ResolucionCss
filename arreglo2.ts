@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
+import { TasaCambioService } from '../services/tasa-cambio.service';
 
 @Component({
   selector: 'app-simulador',
@@ -10,12 +11,8 @@ export class SimuladorComponent implements OnInit {
 
   parametersFormGroup!: FormGroup;
 
-  // Opciones de divisas (debes cargarlas desde tu servicio real)
-  currencyTypeOptions: any[] = [
-    { cdDivisa: 'USD', cambfix: 4000 },
-    { cdDivisa: 'EUR', cambfix: 4400 },
-    { cdDivisa: 'COP', cambfix: 1 }
-  ];
+  // Opciones de divisas cargadas desde el backend
+  currencyTypeOptions: any[] = [];
 
   // Monedas seleccionadas por cada campo
   selectedCurrencies: any = {
@@ -35,7 +32,10 @@ export class SimuladorComponent implements OnInit {
     committedLine: 0
   };
 
-  constructor(private fb: FormBuilder) {}
+  constructor(
+    private fb: FormBuilder,
+    private tasaCambioService: TasaCambioService
+  ) {}
 
   ngOnInit(): void {
     this.parametersFormGroup = this.fb.group({
@@ -59,6 +59,23 @@ export class SimuladorComponent implements OnInit {
       committedLineCurrencyField: [null],
       committedLineField: [0]
     });
+
+    // Llamada al backend para traer las monedas
+    this.getcurrencyTypeCombonBoxData();
+  }
+
+  // Método que consume el servicio
+  getcurrencyTypeCombonBoxData(): void {
+    this.tasaCambioService.getcurrencyTypeCombonBoxData().subscribe({
+      next: (response) => {
+        if (response.status === 'SUCCESS' && response.data) {
+          this.currencyTypeOptions = response.data; // [{cdDiviss, cambFix, fhCambio}]
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar tipos de moneda', err);
+      }
+    });
   }
 
   // Método para actualizar moneda seleccionada
@@ -77,8 +94,8 @@ export class SimuladorComponent implements OnInit {
     const valor = this.parametersFormGroup.get(this.getFieldName(tipo))?.value || 0;
     const currency = this.selectedCurrencies[tipo];
 
-    if (currency && currency.cambfix) {
-      this.valoresConvertidos[tipo] = valor * currency.cambfix;
+    if (currency && currency.cambFix) {
+      this.valoresConvertidos[tipo] = valor * currency.cambFix;
     } else {
       this.valoresConvertidos[tipo] = 0;
     }
@@ -100,5 +117,26 @@ export class SimuladorComponent implements OnInit {
       default:
         return '';
     }
+  }
+}
+
+
+
+
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class TasaCambioService {
+
+  private apiUrl = '/api/tasas-cambio'; // Ajusta con tu base url real
+
+  constructor(private http: HttpClient) {}
+
+  getcurrencyTypeCombonBoxData(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/tipos-moneda`);
   }
 }
