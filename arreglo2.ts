@@ -1,36 +1,34 @@
-export interface relacionDependencia {
-  penomperDependencia: string;
-  petipdocDependencia: string;
-  penumdocDependencia: string;
-  penomperDependiente: string;
-  petipdocDependiente: string;
-  penumdocDependiente: string;
-  nombreDependencia: string;
-  tipoDependencia: number;
+import { relacionDependencia } from "./relacionDependencia.model";
 
-  // 🔹 Los siguientes campos ahora son opcionales
-  penumperDependiente?: string;
-  penumperDependencia?: string;
-  idGrupoGcc?: number;
-  nombreGrupoGcc?: string;
-}
+export class fichaTecnica{
+    penumdoc!: string | null;
+    petipdoc!: string | null;
+    idFichaTecnica!: number | null;
+    fechaCreacion!: Date | string | null;
+    usuarioCreacion!: string | null;
+    relaciones: relacionDependencia[];
+  
+    constructor() {
+      this.relaciones = [];
+    }
 
+  }
 
 
-this.newFactSheet = {
-  penumdoc: this.padNumeroIdentificacion(this.resumenData[0].id),
-  petipdoc: this.tipoDocumentoService.validateTipoDocumento(this.resumenData[0].tipoId),
-  idFichaTecnica: -1,
-  fechaCreacion: new Date(),
-  usuarioCreacion: '',
-  relaciones: this.resumenData.map((row) => ({
-    penomperDependencia: this.penomperDependencia,
-    petipdocDependencia: this.petipdocDependencia,
-    penumdocDependencia: this.penumdocDependencia,
-    penomperDependiente: row.nombreCliente,
-    petipdocDependiente: row.tipoId,
-    penumdocDependiente: row.id,
-    nombreDependencia: row.criterio,
-    tipoDependencia: Number(row.criterioId),
-  })),
-};
+
+export class relacionDependencia {
+    penumperDependiente!: string;
+    penomperDependiente!: string;
+    penumdocDependiente!: string;
+    petipdocDependiente!: string;
+    penumperDependencia!: string | null;
+    penomperDependencia!: string | null;
+    penumdocDependencia!: string | null;
+    petipdocDependencia!: string | null;
+    nombreDependencia!: string;
+    tipoDependencia!: number;
+    idGrupoGcc!: string;
+    nombreGrupoGcc!: string;
+  }
+
+
