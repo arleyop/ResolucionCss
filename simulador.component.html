@@ -1,109 +1,120 @@
-<form [formGroup]="parametriaPatrimonioFormGroup">
-  <div class="container py-5">
-    <div class="row align-items-center">
-      <div class="col">
-        <h1>Patrimonio Basico</h1>
-      </div>
-      <div class="col-auto">
-        <div class="row">
-          <button
-            mat-stroked-button
-            color="primary"
-            (click)="
-              this.parametriaPatrimonioFormGroup.value.idPatrimonio
-                ? (this.parametriaPatrimonioFormGroup.value.idPatrimonio = null)
-                : setNewParametriaMoneda()
-            "
-          >
-            <mat-icon
-              [svgIcon]="
-                this.parametriaPatrimonioFormGroup.value.idPatrimonio
-                  ? 'close'
-                  : 'add'
-              "
-            ></mat-icon>
-            {{
-              this.parametriaPatrimonioFormGroup.value.idPatrimonio
-                ? "Cancelar"
-                : "Crear nuevo Patrimonio"
-            }}
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- Campos del fomulario -->
-    <div
-      [@openClose]="
-        this.parametriaPatrimonioFormGroup.value.idPatrimonio ? 'open' : 'closed'
-      "
-      class="row justify-content-center overflow-hidden"
-    >
-      <div class="col-8 mb-5">
-        <div class="row">
+<div class="container">
+  <div class="row">
+    <div class="col-10 mx-auto">
+      <div class="container py-5">
+        <div class="row pb-2 align-items-center">
           <div class="col">
-            <h2>
-              {{
-                this.parametriaPatrimonioFormGroup.value.idPatrimonio !=
-                -1
-                  ? "Actualizar Patrimonio " 
-                  : "Crear Patrimonio"
-              }}
-            </h2>
+            <h1>Carga Ficha Técnica</h1>
           </div>
         </div>
-        <div class="row row-cols-2 gx-6">
-          <div class="col d-flex justify-content-center">
-            <mat-form-field>
-              <mat-label>Valor Patrimonio:</mat-label>
-              <input type="number" matInput formControlName="patrimonio" />
-            </mat-form-field>
+
+        <!-- Info cliente si está cargado -->
+        <div class="row">
+          <div *ngIf="penomperDependencia; else elseBlock">
+            <h3>
+              Para el cliente {{penomperDependencia}}
+              (<i>{{petipdocDependencia}}-{{penumdocDependencia}}</i>)
+            </h3>
           </div>
-          <div class="col d-flex justify-content-center">
-            <mat-form-field>
-              <mat-label>Fecha Patrimonio:</mat-label>
-              <input type="date" matInput formControlName="fec_periodo" />
-            </mat-form-field>
-          </div>
+          <ng-template #elseBlock>
+            <p>
+              Carga un archivo Excel (.xlsx) con la información de clientes
+              interconectados:
+            </p>
+          </ng-template>
         </div>
-       <div class="row justify-content-center">
-          <div class="col-6">
-            <div class="row">
-              <div class="row justify-content-center">
-                <div class="row">
-                  <app-request-button
-                    (click)="onSaveButtonClickedPatrimonio()"
-                    [isLoading]="isFormLoading"
-                    [disabled]="!getSaveButtonEnabledPatrimonio()"
-                    >{{
-                      this.parametriaPatrimonioFormGroup.value.idPatrimonio != -1
-                        ? "Actualizar patrimonio"
-                        : "Crear patrimonio"
-                    }}</app-request-button
-                  >
-                </div>
-              </div>
+
+        <!-- Drag & Drop o Input File -->
+        <div
+          *ngIf="newFactSheet.idFichaTecnica===-1"
+          class="drag-drop-area"
+          (drop)="onDrop($event)"
+          (dragover)="onDragOver($event)"
+        >
+          <div class="file-upload pt-4">
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              accept=".xlsx"
+              hidden
+              #fileInput
+            />
+            <div class="text-center">
+              <p>
+                Por favor, selecciona un archivo Excel válido (.xlsx) de hasta
+                10MB.
+              </p>
+            </div>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="fileInput.click()"
+              [disabled]="isLoadingFile"
+            >
+              <mat-icon>upload</mat-icon>
+              Seleccionar archivo
+            </button>
+            <div class="text-center">
+              <small>O arrastra tu archivo aquí</small>
             </div>
           </div>
         </div>
+
+        <!-- Previsualización de la tabla con Angular Material -->
+        <div *ngIf="newFactSheet.relaciones.length > 0" class="mt-4">
+          <h3>Vista previa de relaciones cargadas</h3>
+
+          <table
+            mat-table
+            [dataSource]="newFactSheet.relaciones"
+            class="mat-elevation-z8 w-100"
+          >
+            <!-- Nombre Dependencia -->
+            <ng-container matColumnDef="nombreDependencia">
+              <th mat-header-cell *matHeaderCellDef>Nombre Dependencia</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.nombreDependencia }}
+              </td>
+            </ng-container>
+
+            <!-- Tipo Dependencia -->
+            <ng-container matColumnDef="tipoDependencia">
+              <th mat-header-cell *matHeaderCellDef>Tipo Dependencia</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.tipoDependencia }}
+              </td>
+            </ng-container>
+
+            <!-- Nombre Cliente -->
+            <ng-container matColumnDef="penomperDependiente">
+              <th mat-header-cell *matHeaderCellDef>Nombre Cliente</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.penomperDependiente }}
+              </td>
+            </ng-container>
+
+            <!-- Tipo ID -->
+            <ng-container matColumnDef="petipdocDependiente">
+              <th mat-header-cell *matHeaderCellDef>Tipo ID</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.petipdocDependiente }}
+              </td>
+            </ng-container>
+
+            <!-- Número ID -->
+            <ng-container matColumnDef="penumdocDependiente">
+              <th mat-header-cell *matHeaderCellDef>Número ID</th>
+              <td mat-cell *matCellDef="let element">
+                {{ element.penumdocDependiente }}
+              </td>
+            </ng-container>
+
+            <!-- Header y Filas -->
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          </table>
+        </div>
       </div>
     </div>
-
-    <div class="row mt-5">
-      <h2 color="primary">Versión Patrimonio</h2>
-    </div>
-    <div class="row">
-      <!-- Mantén la tabla genérica tal y como la tienes -->
-      <app-shared-table
-        [dataSource]="tableDataPatrimonio"
-        [columnConfig]="columnConfigPatrimonio"
-        [colmunId]="colmunIdPatrimonio"
-        [enableSearch]="true"
-        [searchValue]="searchValue"
-        [searchColumn]="'Usuario'"
-        [searchLabel]="'Buscar por usuario'"
-        [stateLabel]="tableStateLabel"
-        [isProcessing]="isTableLoading"
-      ></app-shared-table>
-    </div>
   </div>
-</form>
+</div>
