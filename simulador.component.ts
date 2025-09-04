@@ -3,11 +3,11 @@ import * as XLSX from 'xlsx';
 import swal from 'sweetalert2';
 import { fichaTecnica } from '../../../features/interconectado/modelo/fichaTecnica.model';
 import { FactSheetXlsxRow } from '../../../features/interconectado/modelo/fact-sheet-xlsx-row.interface';
-import { TipoDocumentoService } from '../../../features/interconectado/services/tipo-documento.service';
+import { NgIf, NgFor } from '@angular/common';
+import { MatButton } from '@angular/material/button';
+import { MatIcon } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { NgIf } from '@angular/common';
+import { TipoDocumentoService } from '../../../features/interconectado/services/tipo-documento.service';
 
 enum Headers {
   TIPO_ID = 'tipo id',
@@ -22,13 +22,28 @@ enum Headers {
   templateUrl: './carga-cliente.component.html',
   styleUrls: ['./carga-cliente.component.css'],
   standalone: true,
-  imports: [NgIf, MatTableModule, MatButtonModule, MatIconModule],
+  imports: [
+    NgIf,
+    NgFor,
+    MatButton,
+    MatIcon,
+    MatTableModule,
+  ],
 })
 export class CargaClienteComponent {
-  isLoadingFile = false;
+  // Estados de carga
+  isLoadingFile: boolean = false;
+  disabled: boolean = false;
+
+  // Variables para mostrar datos del cliente principal
+  penomperDependencia: string = '';
+  petipdocDependencia: string = '';
+  penumdocDependencia: string = '';
+
+  // Datos cargados desde Excel
   resumenData: FactSheetXlsxRow[] = [];
 
-  // Previsualización de la ficha construida
+  // Fact sheet nuevo (lo que vamos a previsualizar)
   newFactSheet: fichaTecnica = {
     penumdoc: '',
     petipdoc: '',
@@ -38,48 +53,64 @@ export class CargaClienteComponent {
     relaciones: [],
   };
 
-  // Info para encabezado
-  penomperDependencia: string = '';
-  petipdocDependencia: string = '';
-  penumdocDependencia: string = '';
-
-  // Columnas visibles en la tabla Material
+  // Columnas que se mostrarán en la tabla
   displayedColumns: string[] = [
-    'nombreDependencia',
-    'tipoDependencia',
     'penomperDependiente',
     'petipdocDependiente',
     'penumdocDependiente',
+    'nombreDependencia',
+    'tipoDependencia',
   ];
 
   constructor(private tipoDocumentoService: TipoDocumentoService) {}
 
-  /**
-   * Selección de archivo desde el input file
-   */
+  // ============================================================
+  // Selección de archivo (input file)
+  // ============================================================
   onFileSelected(event: any) {
     const file = event.target.files[0];
     this.validateAndProcessFile(file);
   }
 
-  /**
-   * Manejo drag & drop
-   */
+  // ============================================================
+  // Drag & Drop
+  // ============================================================
   onDrop(event: DragEvent) {
     event.preventDefault();
+    this.removeDragOverClass();
     if (event.dataTransfer && event.dataTransfer.files.length > 0) {
-      this.validateAndProcessFile(event.dataTransfer.files[0]);
+      const file = event.dataTransfer.files[0];
+      this.validateAndProcessFile(file);
       event.dataTransfer.clearData();
     }
   }
 
   onDragOver(event: DragEvent) {
     event.preventDefault();
+    this.addDragOverClass();
   }
 
-  /**
-   * Validar y procesar el archivo Excel cargado
-   */
+  onDragLeave(event: DragEvent) {
+    this.removeDragOverClass();
+  }
+
+  addDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.add('drag-over');
+    }
+  }
+
+  removeDragOverClass() {
+    const element = document.querySelector('.drag-drop-area');
+    if (element) {
+      element.classList.remove('drag-over');
+    }
+  }
+
+  // ============================================================
+  // Validar y procesar archivo Excel
+  // ============================================================
   validateAndProcessFile(file: File | undefined) {
     this.isLoadingFile = true;
     if (
@@ -92,101 +123,125 @@ export class CargaClienteComponent {
       reader.onload = (e: any) => {
         const binaryExcelFile = new Uint8Array(e.target.result);
         const workbook = XLSX.read(binaryExcelFile, { type: 'array' });
-
-        // Procesar hoja "resumen" para construir la ficha técnica
         this.processResumenSheet(workbook);
-        this.isLoadingFile = false;
       };
       reader.readAsArrayBuffer(file);
     } else {
-      swal(
-        'Error',
-        'El archivo no es válido. Debe ser .xlsx y máximo 10MB.',
-        'error'
-      );
+      swal('Error', 'El archivo debe ser un Excel válido (.xlsx, máx 10MB).', 'error');
       this.isLoadingFile = false;
     }
   }
 
-  /**
-   * Procesar la hoja "resumen" y construir la ficha técnica
-   */
+  // ============================================================
+  // Procesar hoja "resumen"
+  // ============================================================
   processResumenSheet(workbook: XLSX.WorkBook) {
     const sheetName = 'resumen';
     const worksheet = workbook.Sheets[sheetName];
 
-    if (worksheet) {
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      const headers = jsonData[0] as any[];
-      const headersLowerCase = headers.map((h: string) => h.toLowerCase());
-      const rows = jsonData.slice(1);
+    if (!worksheet) {
+      swal('Error', 'La hoja "resumen" no se encontró en el archivo.', 'error');
+      this.isLoadingFile = false;
+      return;
+    }
 
-      // Ubicar columnas requeridas
-      const tipoIdIdx = headersLowerCase.indexOf(Headers.TIPO_ID);
-      const idIdx = headersLowerCase.indexOf(Headers.ID);
-      const nombreClienteIdx = headersLowerCase.indexOf(Headers.NOMBRE_CLIENTE);
-      const criterioIdIdx = headersLowerCase.indexOf(Headers.CRITERIO_ID);
-      const criterioIdx = headersLowerCase.indexOf(Headers.CRITERIO);
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const headers = jsonData[0] as any[];
+    const headersLowerCase = headers.map((header: string) =>
+      header.toLowerCase()
+    );
+    const rows = jsonData.slice(1);
 
-      if (
-        [tipoIdIdx, idIdx, nombreClienteIdx, criterioIdIdx, criterioIdx].includes(
-          -1
-        )
-      ) {
-        swal(
-          'Error',
-          `La hoja "resumen" no tiene todas las columnas necesarias.`,
-          'error'
-        );
-        return;
-      }
+    // Índices de columnas
+    const tipoIdIdx = headersLowerCase.indexOf(Headers.TIPO_ID);
+    const idIdx = headersLowerCase.indexOf(Headers.ID);
+    const nombreClienteIdx = headersLowerCase.indexOf(Headers.NOMBRE_CLIENTE);
+    const criterioIdIdx = headersLowerCase.indexOf(Headers.CRITERIO_ID);
+    const criterioIdx = headersLowerCase.indexOf(Headers.CRITERIO);
 
-      // Construir array de relaciones
-      this.resumenData = rows.map((row: any) => ({
+    // Validar headers
+    if (
+      tipoIdIdx === -1 ||
+      idIdx === -1 ||
+      nombreClienteIdx === -1 ||
+      criterioIdIdx === -1 ||
+      criterioIdx === -1
+    ) {
+      swal(
+        'Error',
+        `La hoja "resumen" no tiene las columnas necesarias. Encontradas: [${headersLowerCase.join(', ')}]`,
+        'error'
+      );
+      this.isLoadingFile = false;
+      return;
+    }
+
+    // Mapear filas a objetos FactSheetXlsxRow
+    this.resumenData = rows.map((row: any) => {
+      return {
         tipoId: String(row[tipoIdIdx]),
         id: String(row[idIdx]),
         nombreCliente: String(row[nombreClienteIdx]),
         criterioId: String(row[criterioIdIdx]),
         criterio: String(row[criterioIdx]),
-      }));
-
-      // Encabezado con cliente principal
-      this.penomperDependencia = this.resumenData[0].nombreCliente;
-      this.petipdocDependencia = this.tipoDocumentoService.validateTipoDocumento(
-        this.resumenData[0].tipoId
-      );
-      this.penumdocDependencia = this.padNumeroIdentificacion(
-        this.resumenData[0].id
-      );
-
-      // Construir ficha técnica para previsualización
-      this.newFactSheet = {
-        penumdoc: this.padNumeroIdentificacion(this.resumenData[0].id),
-        petipdoc: this.tipoDocumentoService.validateTipoDocumento(
-          this.resumenData[0].tipoId
-        ),
-        idFichaTecnica: -1,
-        fechaCreacion: new Date(),
-        usuarioCreacion: '',
-        relaciones: this.resumenData.map((row) => ({
-          penomperDependencia: this.penomperDependencia,
-          petipdocDependencia: this.petipdocDependencia,
-          penumdocDependencia: this.penumdocDependencia,
-          penomperDependiente: row.nombreCliente,
-          petipdocDependiente: row.tipoId,
-          penumdocDependiente: row.id,
-          nombreDependencia: row.criterio,
-          tipoDependencia: Number(row.criterioId),
-        })),
       };
-    } else {
-      swal('Error', 'No se encontró la hoja "resumen" en el archivo.', 'error');
-    }
+    });
+
+    // Datos del cliente principal
+    this.penomperDependencia = this.resumenData[0].nombreCliente;
+    this.petipdocDependencia = this.tipoDocumentoService.validateTipoDocumento(
+      this.resumenData[0].tipoId
+    );
+    this.penumdocDependencia = this.padNumeroIdentificacion(
+      this.resumenData[0].id
+    );
+
+    // Construcción del nuevo fact sheet
+    this.newFactSheet = {
+      penumdoc: this.penumdocDependencia,
+      petipdoc: this.petipdocDependencia,
+      idFichaTecnica: -1,
+      fechaCreacion: new Date(),
+      usuarioCreacion: '',
+      relaciones: this.resumenData.map((row) => ({
+        penomperDependencia: this.penomperDependencia,
+        petipdocDependencia: this.petipdocDependencia,
+        penumdocDependencia: this.penumdocDependencia,
+        penomperDependiente: row.nombreCliente,
+        petipdocDependiente: row.tipoId,
+        penumdocDependiente: row.id,
+        nombreDependencia: row.criterio,
+        tipoDependencia: Number(row.criterioId),
+      })),
+    };
+
+    console.log('newFactSheet:', this.newFactSheet);
+
+    this.isLoadingFile = false;
+    swal('Éxito', 'Archivo procesado y cargado en memoria.', 'success');
   }
 
-  /**
-   * Rellenar número de identificación a 11 dígitos
-   */
+  // ============================================================
+  // Resetear datos
+  // ============================================================
+  reset() {
+    this.newFactSheet = {
+      penumdoc: '',
+      petipdoc: '',
+      idFichaTecnica: -1,
+      fechaCreacion: new Date(),
+      usuarioCreacion: '',
+      relaciones: [],
+    };
+    this.resumenData = [];
+    this.penomperDependencia = '';
+    this.petipdocDependencia = '';
+    this.penumdocDependencia = '';
+  }
+
+  // ============================================================
+  // Helper: Rellenar número de identificación
+  // ============================================================
   padNumeroIdentificacion(numero: string): string {
     return numero.padStart(11, '0');
   }
