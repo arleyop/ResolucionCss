@@ -1,11 +1,36 @@
-Type '{ penomperDependencia: string; petipdocDependencia: string; penumdocDependencia: string; penomperDependiente: string; petipdocDependiente: string; penumdocDependiente: string; nombreDependencia: string; tipoDependencia: number; }[]' is not assignable to type 'relacionDependencia[]'.
-  Type '{ penomperDependencia: string; petipdocDependencia: string; penumdocDependencia: string; penomperDependiente: string; petipdocDependiente: string; penumdocDependiente: string; nombreDependencia: string; tipoDependencia: number; }' is missing the following properties from type 'relacionDependencia': penumperDependiente, penumperDependencia, idGrupoGcc, nombreGrupoGcc [plugin angular-compiler]
+export interface relacionDependencia {
+  penomperDependencia: string;
+  petipdocDependencia: string;
+  penumdocDependencia: string;
+  penomperDependiente: string;
+  petipdocDependiente: string;
+  penumdocDependiente: string;
+  nombreDependencia: string;
+  tipoDependencia: number;
 
-    src/app/components/pages/Interconectados/carga-cliente/carga-cliente.component.ts:171:7:
-      171 │        relaciones: this.resumenData.map((row) => ({
-          ╵        ~~~~~~~~~~
+  // 🔹 Los siguientes campos ahora son opcionales
+  penumperDependiente?: string;
+  penumperDependencia?: string;
+  idGrupoGcc?: number;
+  nombreGrupoGcc?: string;
+}
 
-  The expected type comes from property 'relaciones' which is declared here on type 'fichaTecnica'
 
-    src/app/components/features/interconectado/modelo/fichaTecnica.model.ts:9:4:
-      9 │     relaciones: relacionDependencia[];
+
+this.newFactSheet = {
+  penumdoc: this.padNumeroIdentificacion(this.resumenData[0].id),
+  petipdoc: this.tipoDocumentoService.validateTipoDocumento(this.resumenData[0].tipoId),
+  idFichaTecnica: -1,
+  fechaCreacion: new Date(),
+  usuarioCreacion: '',
+  relaciones: this.resumenData.map((row) => ({
+    penomperDependencia: this.penomperDependencia,
+    petipdocDependencia: this.petipdocDependencia,
+    penumdocDependencia: this.penumdocDependencia,
+    penomperDependiente: row.nombreCliente,
+    petipdocDependiente: row.tipoId,
+    penumdocDependiente: row.id,
+    nombreDependencia: row.criterio,
+    tipoDependencia: Number(row.criterioId),
+  })),
+};
