@@ -1,1 +1,139 @@
-Tipo ID,	ID,	Nombre Cliente,	Tipo ID 1	,ID 1	,Nombre Cliente 1	,Criterio ID,	Criterio
+enum Headers {
+  TIPO_ID = 'tipo id',
+  ID = 'id',
+  NOMBRE_CLIENTE = 'nombre cliente',
+  TIPO_ID_1 = 'tipo id 1',
+  ID_1 = 'id 1',
+  NOMBRE_CLIENTE_1 = 'nombre cliente 1',
+  CRITERIO_ID = 'criterio id',
+  CRITERIO = 'criterio',
+}
+
+
+processResumenSheet(workbook: XLSX.WorkBook) {
+  const sheetName = 'resumen';
+  const worksheet = workbook.Sheets[sheetName];
+
+  if (worksheet) {
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const headers = jsonData[0] as any[];
+    const headersLowerCase = headers.map((h: string) => h.toLowerCase());
+    const rows = jsonData.slice(1);
+
+    // indices
+    const tipoIdIdx = headersLowerCase.indexOf(Headers.TIPO_ID);
+    const idIdx = headersLowerCase.indexOf(Headers.ID);
+    const nombreClienteIdx = headersLowerCase.indexOf(Headers.NOMBRE_CLIENTE);
+    const tipoId1Idx = headersLowerCase.indexOf(Headers.TIPO_ID_1);
+    const id1Idx = headersLowerCase.indexOf(Headers.ID_1);
+    const nombreCliente1Idx = headersLowerCase.indexOf(Headers.NOMBRE_CLIENTE_1);
+    const criterioIdIdx = headersLowerCase.indexOf(Headers.CRITERIO_ID);
+    const criterioIdx = headersLowerCase.indexOf(Headers.CRITERIO);
+
+    if (
+      tipoIdIdx === -1 || idIdx === -1 || nombreClienteIdx === -1 ||
+      tipoId1Idx === -1 || id1Idx === -1 || nombreCliente1Idx === -1 ||
+      criterioIdIdx === -1 || criterioIdx === -1
+    ) {
+      swal(
+        'Error',
+        `La hoja "resumen" no tiene las columnas necesarias. Se encontraron: [${headersLowerCase.join(', ')}]`,
+        'error'
+      );
+      return;
+    }
+
+    this.resumenData = rows.map((row: any) => {
+      return {
+        tipoId: String(row[tipoIdIdx]),
+        id: String(row[idIdx]),
+        nombreCliente: String(row[nombreClienteIdx]),
+        tipoId1: String(row[tipoId1Idx]),
+        id1: String(row[id1Idx]),
+        nombreCliente1: String(row[nombreCliente1Idx]),
+        criterioId: String(row[criterioIdIdx]),
+        criterio: String(row[criterioIdx]),
+      };
+    });
+
+    this.penomperDependencia = this.resumenData[0].nombreCliente;
+    this.petipdocDependencia = this.validateTipoDocumento(this.resumenData[0].tipoId);
+    this.penumdocDependencia = this.padNumeroIdentificacion(this.resumenData[0].id);
+
+    console.log('new resumenData:', this.resumenData);
+  } else {
+    swal('Error', 'La hoja "resumen" no se encontró en el archivo.', 'error');
+  }
+}
+
+
+<!-- Tabla de previsualización -->
+<div *ngIf="resumenData.length > 0" class="mt-4">
+  <h3>Previsualización de clientes</h3>
+  <table mat-table [dataSource]="resumenData" class="mat-elevation-z8 w-100">
+
+    <!-- ID -->
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef> Identificación </th>
+      <td mat-cell *matCellDef="let row"> {{ row.id }} </td>
+    </ng-container>
+
+    <!-- TipoId -->
+    <ng-container matColumnDef="tipoId">
+      <th mat-header-cell *matHeaderCellDef> Tipo Documento </th>
+      <td mat-cell *matCellDef="let row"> {{ row.tipoId }} </td>
+    </ng-container>
+
+    <!-- Nombre Cliente -->
+    <ng-container matColumnDef="nombreCliente">
+      <th mat-header-cell *matHeaderCellDef> Cliente </th>
+      <td mat-cell *matCellDef="let row"> {{ row.nombreCliente }} </td>
+    </ng-container>
+
+    <!-- TipoId1 -->
+    <ng-container matColumnDef="tipoId1">
+      <th mat-header-cell *matHeaderCellDef> Tipo Documento 1 </th>
+      <td mat-cell *matCellDef="let row"> {{ row.tipoId1 }} </td>
+    </ng-container>
+
+    <!-- ID1 -->
+    <ng-container matColumnDef="id1">
+      <th mat-header-cell *matHeaderCellDef> Identificación 1 </th>
+      <td mat-cell *matCellDef="let row"> {{ row.id1 }} </td>
+    </ng-container>
+
+    <!-- Nombre Cliente 1 -->
+    <ng-container matColumnDef="nombreCliente1">
+      <th mat-header-cell *matHeaderCellDef> Cliente 1 </th>
+      <td mat-cell *matCellDef="let row"> {{ row.nombreCliente1 }} </td>
+    </ng-container>
+
+    <!-- Criterio -->
+    <ng-container matColumnDef="criterio">
+      <th mat-header-cell *matHeaderCellDef> Criterio </th>
+      <td mat-cell *matCellDef="let row"> {{ row.criterio }} </td>
+    </ng-container>
+
+    <!-- CriterioId -->
+    <ng-container matColumnDef="criterioId">
+      <th mat-header-cell *matHeaderCellDef> ID Criterio </th>
+      <td mat-cell *matCellDef="let row"> {{ row.criterioId }} </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+  </table>
+</div>
+
+
+displayedColumns: string[] = [
+  'id',
+  'tipoId',
+  'nombreCliente',
+  'id1',
+  'tipoId1',
+  'nombreCliente1',
+  'criterio',
+  'criterioId'
+];
+
