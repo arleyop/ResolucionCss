@@ -1,22 +1,3 @@
-import { Injectable } from '@angular/core';
-
-@Injectable({
-  providedIn: 'root',
-})
-export class TipoDocumentoService {
-  /**
-   * Valida el tipo de documento y lo transforma según reglas.
-   * @param tipoDocumento tipo de documento leído del Excel
-   * @returns tipo de documento normalizado
-   */
-  validateTipoDocumento(tipoDocumento: string): string {
-    switch (tipoDocumento?.toUpperCase()) {
-      case 'NIT':
-        return 'NT';
-      case 'CEDULA':
-        return 'CC';
-      default:
-        return tipoDocumento;
-    }
-  }
-}
+Type '{ penomperDependencia: string; petipdocDependencia: string; penumdocDependencia: string; penomperDependiente: string; petipdocDependiente: string; penumdocDependiente: string; nombreDependencia: string; tipoDependencia: number; }[]' is not assignable to type 'relacionDependencia[]'.
+  Type '{ penomperDependencia: string; petipdocDependencia: string; penumdocDependencia: string; penomperDependiente: string; petipdocDependiente: string; penumdocDependiente: string; nombreDependencia: string; tipoDependencia: number; }' is missing the following properties from type 'relacionDependencia': penumperDependiente, penumperDependencia, idGrupoGcc, nombreGrupoGccts(2322)
+fichaTecnica.model.ts(9, 5): The expected type comes from property 'relaciones' which is declared here on type 'fichaTecnica'
